@@ -1,0 +1,3175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>소액수의계약 초과 관리 대시보드</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Premium Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  
+  <!-- Modern Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      /* Premium HSL Color Tokens */
+      --primary: #4f46e5;         /* Indigo-600 */
+      --primary-hover: #4338ca;   /* Indigo-700 */
+      --primary-light: #e0e7ff;   /* Indigo-100 */
+      
+      --danger: #ef4444;          /* Red-500 */
+      --danger-bg: #fee2e2;
+      --warning: #f97316;         /* Orange-500 */
+      --warning-bg: #ffedd5;
+      --success: #10b981;         /* Emerald-500 */
+      --success-bg: #d1fae5;
+      
+      --bg: #f8fafc;              /* Slate-50 */
+      --card: #ffffff;
+      --border: #e2e8f0;          /* Slate-200 */
+      --text: #0f172a;            /* Slate-900 */
+      --muted: #64748b;           /* Slate-500 */
+      
+      /* Premium Light Theme Sidebar & Header Tokens */
+      --sidebar-bg: #ffffff;      /* Pure White */
+      --sidebar-border: #e2e8f0;  /* Slate-200 */
+      --sidebar-text: #0f172a;    /* Slate-900 */
+      --sidebar-muted: #64748b;   /* Slate-500 */
+      
+      --shadow-sm: 0 1px 3px rgba(15,23,42,0.03), 0 1px 2px rgba(15,23,42,0.02);
+      --shadow-md: 0 4px 6px -1px rgba(15,23,42,0.04), 0 2px 4px -1px rgba(15,23,42,0.03);
+      --shadow-lg: 0 10px 15px -3px rgba(15,23,42,0.05), 0 4px 6px -2px rgba(15,23,42,0.03);
+      --transition-normal: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body { 
+      font-family: "Pretendard", "Inter", "Noto Sans KR", -apple-system, sans-serif; 
+      background: var(--bg); 
+      color: var(--text); 
+      font-size: 14px; 
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      background: var(--sidebar-bg); 
+      color: var(--sidebar-text); 
+      padding: 14px 32px;
+      display: flex; 
+      align-items: center; 
+      gap: 16px;
+      position: sticky; 
+      top: 0; 
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+      border-bottom: 1px solid var(--sidebar-border);
+    }
+    
+    header h1 { 
+      font-family: "Outfit", "Pretendard", sans-serif;
+      font-size: 17px; 
+      font-weight: 800; 
+      letter-spacing: -0.3px;
+      margin-right: 20px; 
+      background: linear-gradient(135deg, #4f46e5, #312e81);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    header .header-info { 
+      font-size: 12.5px; 
+      color: var(--sidebar-muted); 
+      margin-left: auto; 
+      margin-right: 16px; 
+      font-weight: 600;
+      background: rgba(15, 23, 42, 0.04);
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(15, 23, 42, 0.06);
+    }
+    
+    .header-upload-group { display: flex; align-items: center; gap: 10px; }
+    
+    .btn-header-action {
+      background: #ffffff; 
+      color: var(--text); 
+      border: 1px solid var(--border);
+      padding: 7px 14px; 
+      border-radius: 8px; 
+      font-size: 12.5px; 
+      font-weight: 600; 
+      cursor: pointer;
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+      transition: var(--transition-normal);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .btn-header-action:hover { 
+      background: var(--bg); 
+      color: var(--text); 
+      border-color: #cbd5e1;
+      transform: translateY(-1px);
+    }
+    
+    .btn-header-reset { 
+      background: #fee2e2; 
+      color: #dc2626; 
+      border: 1px solid #fca5a5; 
+      box-shadow: none;
+    }
+    
+    .btn-header-reset:hover { 
+      background: #ef4444; 
+      color: #ffffff; 
+      border-color: #ef4444; 
+    }
+
+    .btn-download-app {
+      background: linear-gradient(135deg, var(--primary), #4338ca);
+      color: #ffffff; 
+      border: none;
+      padding: 7px 14px; 
+      border-radius: 8px; 
+      font-size: 12.5px; 
+      font-weight: 600; 
+      cursor: pointer;
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+      transition: var(--transition-normal);
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+    }
+    
+    .btn-download-app:hover { 
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35);
+    }
+
+    .main { display: flex; min-height: calc(100vh - 59px); }
+    
+    aside {
+      width: 280px; 
+      min-width: 280px; 
+      background: var(--sidebar-bg); 
+      border-right: 1px solid var(--sidebar-border);
+      padding: 24px 20px; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 20px;
+      overflow-y: auto; 
+      max-height: calc(100vh - 59px); 
+      position: sticky; 
+      top: 59px;
+      color: var(--sidebar-text);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    aside h2 { 
+      font-family: "Outfit", "Pretendard", sans-serif;
+      font-size: 11.5px; 
+      font-weight: 800; 
+      color: var(--sidebar-muted); 
+      text-transform: uppercase; 
+      letter-spacing: 1px; 
+      margin-top: 4px;
+      border-left: 3px solid var(--primary);
+      padding-left: 8px;
+    }
+    
+    .limit-group { display: flex; flex-direction: column; gap: 10px; }
+    
+    .limit-group label { 
+      display: block; 
+      font-size: 11.5px; 
+      color: var(--sidebar-muted); 
+      margin-bottom: 3px; 
+      font-weight: 600;
+    }
+    
+    .limit-group input[type=number], .limit-group input[type=date] {
+      width: 100%; 
+      padding: 8px 12px; 
+      border: 1px solid var(--sidebar-border); 
+      border-radius: 8px;
+      font-size: 12.5px; 
+      color: var(--sidebar-text); 
+      background: var(--bg);
+      outline: none;
+      transition: var(--transition-normal);
+    }
+    
+    .limit-group input[type=number]:focus, .limit-group input[type=date]:focus {
+      border-color: var(--primary);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+    
+    .content { flex: 1; padding: 24px 32px; display: flex; flex-direction: column; gap: 20px; overflow-x: hidden; }
+    
+    .alert-banner {
+      display: none; 
+      background: #fef2f2; 
+      border: 1px solid #fee2e2;
+      border-left: 4px solid var(--danger);
+      border-radius: 10px; 
+      padding: 12px 20px; 
+      color: #991b1b; 
+      font-weight: 600; 
+      font-size: 13.5px;
+      box-shadow: var(--shadow-sm);
+      animation: fadeIn 0.4s ease-out;
+    }
+    
+    .alert-banner.show { display: flex; align-items: center; gap: 12px; }
+    
+    .empty-state-card { 
+      background: var(--card); 
+      border: 2px dashed var(--border); 
+      padding: 60px 40px; 
+      text-align: center; 
+      border-radius: 12px; 
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    
+    .kpi-card { 
+      background: var(--card); 
+      border-radius: 12px; 
+      padding: 18px 20px; 
+      border: 1px solid var(--border); 
+      box-shadow: var(--shadow-sm); 
+      transition: var(--transition-normal);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary-light);
+    }
+    
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 4px; height: 100%;
+      background: var(--primary);
+      opacity: 0.8;
+    }
+    
+    .kpi-card.red-indicator::before { background: var(--danger); }
+    
+    .kpi-card .label { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .kpi-card .value { font-size: 22px; font-weight: 800; margin-top: 6px; color: var(--text); font-family: "Outfit", sans-serif; }
+    
+    .kpi-card .value.red { color: var(--danger); }
+    
+    .kpi-card .sub { font-size: 11.5px; color: var(--muted); margin-top: 4px; font-weight: 500; }
+
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    
+    .card { 
+      background: var(--card); 
+      border-radius: 12px; 
+      border: 1px solid var(--border); 
+      padding: 20px; 
+      box-shadow: var(--shadow-sm); 
+      transition: var(--transition-normal);
+    }
+    
+    .card h3 { 
+      font-size: 14px; 
+      font-weight: 800; 
+      color: var(--text); 
+      margin-bottom: 16px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+    }
+    
+    .chart-wrap { position: relative; height: 260px; width: 100%; }
+
+    .doughnut-flex-container { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; gap: 20px; }
+    
+    .doughnut-wrap { position: relative; width: 230px; height: 230px; display: flex; align-items: center; justify-content: center; }
+    
+    .doughnut-center {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; pointer-events: none; width: auto; height: auto; z-index: 5;
+    }
+    
+    .doughnut-center .dc-cnt { font-size: 16px; font-weight: 800; color: var(--text); line-height: 1.3; font-family: "Outfit", sans-serif; }
+    
+    .doughnut-center .dc-amt { font-size: 11.5px; color: var(--danger); font-weight: 800; margin-top: 4px; line-height: 1.2; }
+    
+    .custom-html-legend { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 10px; 
+      justify-content: center; 
+      font-size: 12.5px; 
+      color: var(--text); 
+      padding-left: 16px; 
+      border-left: 1px solid var(--border); 
+      height: fit-content; 
+    }
+    
+    .custom-legend-item { display: flex; align-items: center; gap: 8px; white-space: nowrap; font-weight: 600; }
+
+    .filter-bar { 
+      display: flex; 
+      gap: 14px; 
+      flex-wrap: wrap; 
+      align-items: flex-end; 
+      background: var(--card); 
+      padding: 16px 20px; 
+      border-radius: 12px; 
+      border: 1px solid var(--border); 
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .filter-bar label { font-size: 11.5px; color: var(--muted); display: block; margin-bottom: 5px; font-weight: 700; }
+    
+    .filter-bar select, .filter-bar input { 
+      padding: 8px 12px; 
+      border: 1px solid var(--border); 
+      border-radius: 8px; 
+      font-size: 12.5px; 
+      background: var(--bg); 
+      min-width: 140px; 
+      outline: none;
+      transition: var(--transition-normal);
+    }
+    
+    .filter-bar select:focus, .filter-bar input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+      background: #ffffff;
+    }
+
+    .scrollable-table-wrap { 
+      max-height: 440px; 
+      overflow-y: auto; 
+      border: 1px solid var(--border); 
+      border-radius: 10px; 
+      box-shadow: var(--shadow-sm);
+    }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    
+    thead th { 
+      position: sticky; 
+      top: 0; 
+      z-index: 10; 
+      background: #f1f5f9; 
+      color: #334155; 
+      padding: 12px 14px; 
+      font-weight: 700; 
+      white-space: nowrap; 
+      cursor: pointer; 
+      user-select: none; 
+      transition: background 0.2s;
+      border-bottom: 2px solid var(--border);
+    }
+    
+    thead th:hover:not(.no-sort) { background: #e2e8f0; }
+    
+    thead th.no-sort { cursor: default; }
+    
+    tbody tr { border-bottom: 1px solid var(--border); transition: var(--transition-normal); }
+    
+    tbody tr:hover { background: #f8fafc; }
+    
+    tbody td { padding: 12px 14px; vertical-align: middle; }
+
+    .badge { 
+      display: inline-block; 
+      padding: 3px 8px; 
+      border-radius: 20px; 
+      font-size: 11px; 
+      font-weight: 700; 
+      border: 1px solid transparent;
+    }
+    
+    .badge-over { background: var(--danger-bg); color: var(--danger); border-color: #fecaca; }
+    
+    .badge-split { background: var(--warning-bg); color: var(--warning); border-color: #fed7aa; }
+    .badge-normal { background: var(--success-bg); color: var(--success); border-color: #a7f3d0; }
+
+    .tab-bar { display: flex; border-bottom: 2px solid var(--border); flex-wrap: wrap; margin-bottom: 8px; gap: 4px; }
+    
+    .tab-btn { 
+      padding: 12px 20px; 
+      background: none; 
+      border: none; 
+      cursor: pointer; 
+      font-size: 13.5px; 
+      font-weight: 700; 
+      color: var(--muted); 
+      border-bottom: 3px solid transparent; 
+      margin-bottom: -2px; 
+      transition: var(--transition-normal);
+    }
+    
+    .tab-btn:hover { color: var(--text); }
+    
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+    
+    .tab-content { display: none; animation: fadeIn 0.4s ease-out; }
+    
+    .tab-content.active { display: block; }
+    
+    .sum-sub-content { display: none; animation: fadeIn 0.3s ease-out; }
+    
+    .sum-sub-content.active { display: block; }
+    
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    
+    #toast { 
+      position: fixed; 
+      bottom: 24px; 
+      right: 24px; 
+      background: var(--sidebar-bg); 
+      color: var(--text); 
+      padding: 12px 20px; 
+      border-radius: 8px; 
+      font-size: 13px; 
+      font-weight: 600;
+      box-shadow: var(--shadow-lg); 
+      transform: translateY(80px); 
+      opacity: 0; 
+      transition: var(--transition-normal); 
+      z-index: 9999; 
+      border: 1px solid var(--sidebar-border);
+    }
+    
+    #toast.show { transform: translateY(0); opacity: 1; }
+    
+    .hidden { display: none !important; }
+    
+    .aside-pjt-item { 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+      font-size: 12px; 
+      padding: 6px 10px; 
+      cursor: pointer; 
+      border-radius: 6px;
+      transition: var(--transition-normal);
+    }
+    
+    .aside-pjt-item:hover { background: rgba(0,0,0,0.03); }
+    
+    .aside-pjt-item.is-pjt { 
+      font-weight: 700; 
+      color: #4f46e5; 
+      background: rgba(79, 70, 229, 0.08); 
+    }
+    
+    .table-search-box { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12.5px; outline: none; }
+    .table-search-box:focus { border-color: var(--primary); }
+    
+    .sortable-asc::after { content: " ▲"; font-size: 10px; color: var(--primary); }
+    .sortable-desc::after { content: " ▼"; font-size: 10px; color: var(--primary); }
+    .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+    /* Compact Timeline Structure Styles */
+    .cmp-layout-container { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; margin-bottom: 12px; }
+    .cmp-setup-zone { display: flex; flex-direction: column; gap: 12px; }
+    .cmp-date-grid { display: grid; grid-template-columns: repeat(3, 1fr) auto; gap: 10px; align-items: flex-end; }
+    .cmp-date-box { display: flex; flex-direction: column; gap: 4px; }
+    .cmp-date-box label { font-size: 11.5px; font-weight: 700; }
+    .cmp-date-box label.blue { color: #818cf8; }
+    .cmp-date-box label.orange { color: #fb923c; }
+    .cmp-date-box input[type=date] { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; width: 100%; }
+    
+    .timeline-slider-wrap { background: var(--bg); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border); }
+    .timeline-slider-wrap .slider-lbl { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 700; }
+    .range-slider-container { position: relative; width: 100%; height: 20px; display: flex; align-items: center; }
+    .range-slider-container input[type=range] {
+      -webkit-appearance: none; width: 100%; background: transparent; position: absolute; left: 0; pointer-events: none; margin: 0;
+    }
+    .range-slider-container input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; background: #cbd5e1; border-radius: 3px; }
+    .range-slider-container input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: var(--primary); cursor: pointer; pointer-events: auto; margin-top: -5px; position: relative; z-index: 2; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.1s;
+    }
+    .range-slider-container input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    .range-slider-container #slide_base::-webkit-slider-thumb { background: #f97316; scale: 1.1; z-index: 3; }
+    
+    .cmp-mini-kpi-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: stretch; height: 100%; }
+    .cmp-mini-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; justify-content: center; }
+    .cmp-mini-card .m-lbl { font-size: 11px; color: var(--muted); font-weight: 700; }
+    .cmp-mini-card .m-val { font-size: 20px; font-weight: 800; margin-top: 4px; font-family: "Outfit", sans-serif; }
+    .cmp-mini-card .m-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; font-weight: 500; }
+    
+    .cmp-divider-card { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #ffffff; padding: 0 12px; text-align: center; }
+    .cmp-divider-card .d-amt { font-size: 15px; font-weight: 800; color: var(--text); }
+    .cmp-divider-card .d-sub { font-size: 10.5px; color: var(--muted); font-weight: 600; }
+
+    /* Modal Styling */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    
+    .modal-backdrop.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+    .modal-card {
+      background: var(--card);
+      width: 94%;
+      max-width: 1040px;
+      max-height: 85vh;
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+      transform: scale(0.95);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      overflow: hidden;
+    }
+    
+    .modal-backdrop.show .modal-card {
+      transform: scale(1);
+    }
+    
+    .modal-header {
+      background: #ffffff;
+      color: var(--text);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .modal-header h3 {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 24px;
+      cursor: pointer;
+      transition: var(--transition-normal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+    }
+    
+    .modal-close:hover {
+      color: var(--text);
+      background: var(--bg);
+      transform: rotate(90deg);
+    }
+    
+    .modal-subheader {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    .modal-info-pills { display: flex; gap: 8px; }
+    
+    .modal-pill {
+      font-size: 11.5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: 700;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    
+    .modal-pill.danger {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border-color: #fecaca;
+    }
+    
+    .modal-body {
+      padding: 20px 24px;
+      overflow-y: auto;
+      flex: 1;
+      background: var(--bg);
+    }
+    
+    .modal-table-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .modal-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+    
+    .modal-table th {
+      background: #f1f5f9;
+      color: #334155;
+      padding: 10px 12px;
+      font-weight: 700;
+      text-align: left;
+      white-space: nowrap;
+      border-bottom: 2px solid var(--border);
+    }
+    
+    .modal-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      vertical-align: middle;
+    }
+    
+    .modal-table tr:last-child td { border-bottom: none; }
+    
+    .modal-table tbody tr:hover { background: #f1f5f9; }
+    
+    .modal-footer {
+      padding: 14px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      background: var(--card);
+    }
+    
+    .btn-modal-close {
+      background: var(--muted);
+      color: #ffffff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition-normal);
+    }
+    
+    .btn-modal-close:hover { background: var(--text); }
+
+    /* Keyframes */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Premium Hover Animation Effects */
+    button, input, select { transition: var(--transition-normal); }
+
+    /* Accordion Expanded Style */
+    .expanded-row {
+      background-color: var(--primary-light) !important;
+      transition: background-color 0.2s ease;
+    }
+    .expanded-row td strong {
+      color: var(--primary) !important;
+    }
+    .pjt-vendor-detail-row {
+      background-color: #f1f5f9 !important;
+    }
+    .pjt-vendor-detail-panel {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--primary) !important;
+      border-radius: 8px;
+      padding: 16px !important;
+      box-shadow: var(--shadow-lg) !important;
+      margin: 4px 0 8px 0;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    /* 2열 대시보드 레이아웃 */
+    .dash-layout-container {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    
+    @media (max-width: 1280px) {
+      .dash-layout-container {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* 좌우 분할 플렉스 구조 */
+    .chart-table-split {
+      display: flex;
+      gap: 12px;
+      align-items: stretch;
+      margin-top: 14px;
+      width: 100%;
+    }
+    
+    .chart-table-split .left-chart-side {
+      flex: 1.6;
+      min-width: 0; /* 차트 붕괴 방지 */
+      position: relative;
+    }
+    
+    .chart-table-split .right-table-side {
+      flex: 1;
+      min-width: 0;
+      max-width: 240px; /* 테이블이 너무 넓어지는 것을 방지하여 차트에 공간 양보 */
+      max-height: 240px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow-sm);
+      background: var(--card);
+    }
+    
+    /* 분할 레이아웃 내부 테이블 초미니 최적화 (가로 폭 절대 사수) */
+    .chart-table-split .right-table-side table th,
+    .chart-table-split .right-table-side table td {
+      padding: 8px 10px !important;
+      font-size: 11.5px !important;
+      white-space: nowrap;
+    }
+    
+    /* 미니 차트 토글 탭 스타일 */
+    .mini-toggle-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 8px;
+      justify-content: flex-end;
+    }
+    
+    .btn-mini-toggle {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: var(--transition-normal);
+    }
+    
+    .btn-mini-toggle:hover {
+      background: var(--border);
+      color: var(--text);
+    }
+    
+    .btn-mini-toggle.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+    
+    .dashboard-subtab-content {
+      animation: fadeIn 0.3s ease-out;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <span style="font-size: 20px;">🏗️</span>
+  <h1>소액수의계약 초과 관리 대시보드</h1>
+  <div class="header-upload-group">
+    <button class="btn-header-action" onclick="document.getElementById('fileInput').click()">📂 엑셀 파일 선택</button>
+    <button class="btn-header-action btn-header-reset" onclick="resetAllData()">🔄 데이터 리셋</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="loadFile(event)" style="display:none;">
+  </div>
+  <span id="lastUpdated" class="header-info">구매부서 | 데이터를 업로드해주세요</span>
+  <button class="btn-download-app" onclick="downloadThisApp()">💻 프로그램 다운로드</button>
+</header>
+
+<div class="main">
+  <aside>
+    <h2>⚙️ 한도 설정 (만원)</h2>
+    <div class="limit-group">
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <label>설비 한도</label>
+        <input type="number" id="lim_equip" value="3000" step="100">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <label>자재 일반 한도</label>
+        <input type="number" id="lim_mat_normal" value="1000" step="100">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <label>자재 사업단 한도</label>
+        <input type="number" id="lim_mat_project" value="3000" step="100">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <label>자재 혼합골재 한도</label>
+        <input type="number" id="lim_mat_mix" value="3000" step="100">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <label>공사/용역 일반 한도</label>
+        <input type="number" id="lim_work_normal" value="3000" step="100">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <label>공사/용역 사업단 한도</label>
+        <input type="number" id="lim_work_project" value="5000" step="100">
+      </div>
+    </div>
+
+    <h2>📅 분석 기간 설정</h2>
+    <div class="limit-group">
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <label>시작일</label>
+        <input type="date" id="analysis_start_date">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <label>종료일</label>
+        <input type="date" id="analysis_end_date">
+      </div>
+    </div>
+
+    <h2>🏢 독립사업단 지정</h2>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <input type="text" id="asidePjtSearch" placeholder="🔍 프로젝트명 검색..." oninput="renderAsidePjtGrid()" style="width:100%; font-size:11.5px; padding:6px 10px; border: 1px solid var(--sidebar-border); border-radius:6px; background: var(--bg); color: var(--sidebar-text); outline: none;">
+      <div style="display:flex; gap:6px;">
+        <button onclick="setAsidePjtAll(true)" style="padding:4px; font-size:11px; flex:1; cursor:pointer; background: #ffffff; color: var(--sidebar-text); border: 1px solid var(--border); border-radius: 4px; box-shadow: var(--shadow-sm);">전체 선택</button>
+        <button onclick="setAsidePjtAll(false)" style="padding:4px; font-size:11px; flex:1; cursor:pointer; background: #ffffff; color: var(--sidebar-text); border: 1px solid var(--border); border-radius: 4px; box-shadow: var(--shadow-sm);">전체 해제</button>
+      </div>
+      <div id="asidePjtList" style="max-height:130px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:6px; background: var(--bg); display:flex; flex-direction:column; gap:4px;">
+        <div style="text-align:center; color:var(--sidebar-muted); font-size:11px; padding:8px;">데이터를 업로드해주세요.</div>
+      </div>
+    </div>
+    <button class="btn-download-app" onclick="runAnalysis()" style="margin-top:10px; width: 100%; justify-content: center; padding: 10px;">🔍 분석 동기화 및 가동</button>
+  </aside>
+
+  <div class="content">
+    <div class="alert-banner" id="alertBanner">
+      <span>🚨</span>
+      <span id="alertText">리스크 인덱스: 실시간 소액수의 한도 통제 모니터링 시스템 가동 중 (분석 데이터 로드 대기)</span>
+    </div>
+
+    <div id="emptyGuideCard" class="empty-state-card">
+      <span style="font-size: 40px; margin-bottom: 8px;">📊</span>
+      <h3 style="font-size:16px; color:var(--primary); font-weight: 800;">데이터 공급 대기 중</h3>
+      <p style="color: var(--muted); font-size: 13.5px; max-width: 460px;">상단의 <strong>[📂 엑셀 파일 선택]</strong> 버튼을 통해 원천 엑셀 보고서를 업로드하시면 대시보드 모니터링 기능이 실시간으로 구성됩니다.</p>
+    </div>
+
+    <div id="dashboardSection" class="hidden">
+      <div class="tab-bar">
+        <button class="tab-btn active" id="btn-tab-dashboard" onclick="switchTab('tab-dashboard',this)">📊 종합 대시보드</button>
+        <button class="tab-btn" onclick="switchTab('tab-summary',this)">📈 다차원 업무 요약</button>
+        <button class="tab-btn" onclick="switchTab('tab-compare',this)">📅 기간 전후 비교</button>
+        <button class="tab-btn" onclick="switchTab('tab-detail',this)">📋 초과 모니터링 상세</button>
+        <button class="tab-btn" id="btn-tab-suspect" onclick="switchTab('tab-suspect',this)">🔎 쪼개기/증액 의심 분석</button>
+      </div>
+
+      <!-- 종합 대시보드 탭 -->
+      <div id="tab-dashboard" class="tab-content active">
+        <div class="kpi-row" id="kpiRow"></div>
+        
+        <div class="dash-layout-container">
+          <!-- 좌측 열: 월별 초과 계약 및 추이 -->
+          <div class="card" style="margin-top:0;">
+            <h3>📅 월별 초과 계약 및 추이</h3>
+            <div class="chart-table-split">
+              <div class="left-chart-side">
+                <div class="chart-wrap" style="height:240px;"><canvas id="chartLine"></canvas></div>
+              </div>
+              <div class="right-table-side" style="max-height:240px;">
+                <table id="dashMonthTable">
+                  <thead>
+                    <tr>
+                      <th onclick="sortTable('dashMonthTable', 0, 'str')">발생 년월</th>
+                      <th onclick="sortTable('dashMonthTable', 1, 'num')" class="num">초과건수</th>
+                      <th onclick="sortTable('dashMonthTable', 2, 'num')" class="num">총 초과금액</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashMonthTbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- 우측 열: 관점별 리스크 다차원 분석 -->
+          <div class="card" style="margin-top:0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--border); margin-bottom:12px; padding-bottom:0;">
+              <div style="display:flex; gap:4px; margin-bottom:-2px;">
+                <button class="tab-btn active" id="btn-subtab-job" onclick="switchDashboardSubTab('job', this)" style="padding:8px 12px; font-size:13px;">📂 업무구분별 관점</button>
+                <button class="tab-btn" id="btn-subtab-reason" onclick="switchDashboardSubTab('reason', this)" style="padding:8px 12px; font-size:13px;">🔧 초과사유별 관점</button>
+              </div>
+              <span id="subtabCountInfo" style="font-size:12px; color:var(--muted); font-weight:600; padding-bottom:8px;"></span>
+            </div>
+
+            <!-- 업무구분별 분석 서브 콘텐츠 -->
+            <div id="subtab-job-content" class="dashboard-subtab-content">
+              <div class="mini-toggle-bar">
+                <button class="btn-mini-toggle active" onclick="toggleJobChart('bar', this)">📊 규모 분석 (Bar)</button>
+                <button class="btn-mini-toggle" onclick="toggleJobChart('doughnut', this)">📋 빈도 분석 (Doughnut)</button>
+              </div>
+              <div class="chart-table-split">
+                <div class="left-chart-side">
+                  <div id="jobBarChartWrap" class="chart-wrap" style="height:200px;"><canvas id="sumChartJob"></canvas></div>
+                  <div id="jobDoughnutChartWrap" class="chart-wrap hidden" style="height:200px;">
+                    <div class="doughnut-flex-container" style="gap:10px;">
+                      <div class="doughnut-wrap" style="width:150px; height:150px;">
+                        <canvas id="sumPieJob"></canvas>
+                        <div class="doughnut-center" id="sumPieJobCenter" style="scale:0.75;"></div>
+                      </div>
+                      <div class="custom-html-legend" id="sumPieJobLegend" style="font-size:11px; padding-left:8px; gap:6px;"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="right-table-side" style="max-height:200px;">
+                  <table id="summaryJobTable">
+                    <thead>
+                      <tr>
+                        <th onclick="sortTable('summaryJobTable', 0, 'str')">업무구분</th>
+                        <th onclick="sortTable('summaryJobTable', 1, 'num')" class="num">초과건수</th>
+                        <th onclick="sortTable('summaryJobTable', 2, 'num')" class="num">총 초과금액</th>
+                      </tr>
+                    </thead>
+                    <tbody id="summaryJobTbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- 초과사유별 분석 서브 콘텐츠 -->
+            <div id="subtab-reason-content" class="dashboard-subtab-content hidden">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <div class="filter-bar" style="padding:4px 8px; border-radius:6px; margin:0; box-shadow:none; border:none; background:transparent;">
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <label style="margin:0; font-size:11px; white-space:nowrap; font-weight:700;">현장 필터:</label>
+                    <select id="sumWorkPjtFilter" onchange="renderSummaryWork()" style="padding:4px 8px; font-size:11.5px; min-width:120px; background:var(--bg);">
+                      <option value="">전체</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="mini-toggle-bar" style="margin:0;">
+                  <button class="btn-mini-toggle active" onclick="toggleReasonChart('doughnut', this)">📋 비중 분석 (Doughnut)</button>
+                  <button class="btn-mini-toggle" onclick="toggleReasonChart('bar', this)">📊 누적액 분석 (Bar)</button>
+                </div>
+              </div>
+              <div class="chart-table-split">
+                <div class="left-chart-side">
+                  <div id="reasonDoughnutChartWrap" class="chart-wrap" style="height:200px;">
+                    <div class="doughnut-flex-container" style="gap:10px;">
+                      <div class="doughnut-wrap" style="width:150px; height:150px;">
+                        <canvas id="sumPieWork"></canvas>
+                        <div class="doughnut-center" id="sumPieWorkCenter" style="scale:0.75;"></div>
+                      </div>
+                      <div class="custom-html-legend" id="sumPieWorkLegend" style="font-size:11px; padding-left:8px; gap:6px;"></div>
+                    </div>
+                  </div>
+                  <div id="reasonBarChartWrap" class="chart-wrap hidden" style="height:200px;"><canvas id="sumChartWork"></canvas></div>
+                </div>
+                <div class="right-table-side" style="max-height:200px;">
+                  <table id="workSumTable">
+                    <thead>
+                      <tr>
+                        <th onclick="sortTable('workSumTable', 0, 'str')">사유분류</th>
+                        <th onclick="sortTable('workSumTable', 1, 'num')" class="num">초과건수</th>
+                        <th onclick="sortTable('workSumTable', 2, 'num')" class="num">총 초과금액</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sumWorkTbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- 다차원 업무 요약 탭 -->
+      <div id="tab-summary" class="tab-content">
+        <div style="display:flex; border-bottom:2px solid var(--border); margin-bottom:16px; gap: 4px;" id="summarySubTabBar">
+          <button class="tab-btn active" onclick="switchSummaryTab('sum-pjt',this)">🏗️ 현장/PJT별 관점</button>
+          <button class="tab-btn" onclick="switchSummaryTab('sum-vendor',this)">🤝 협력업체별 관점</button>
+        </div>
+
+        <!-- 현장/PJT별 관점 -->
+        <div id="sum-pjt" class="sum-sub-content active">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+            <div class="card"><h3>📊 프로젝트별 초과 빈도 Top 10</h3><div class="chart-wrap"><canvas id="sumChartPjtCnt"></canvas></div></div>
+            <div class="card"><h3>📊 프로젝트별 총 초과 금액 Top 10</h3><div class="chart-wrap"><canvas id="sumChartPjtAmt"></canvas></div></div>
+          </div>
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
+              <span class="section-title" style="font-weight:800; font-size: 13.5px;">현장별 정량 리스크 리포트</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <select id="sumPjtJobFilter" onchange="renderSummaryPjt()" style="padding: 6px 10px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 6px; outline: none; background: var(--bg); cursor: pointer; font-weight: 600; color: var(--text);">
+                  <option value="">업무구분: 전체</option>
+                  <option value="공사/용역">공사/용역</option>
+                  <option value="설비">설비</option>
+                  <option value="자재">자재</option>
+                </select>
+                <input type="text" id="searchPjtInput" class="table-search-box" placeholder="🔍 프로젝트명 검색..." oninput="filterPjtTableLive()">
+              </div>
+            </div>
+            <div class="scrollable-table-wrap">
+              <table id="pjtSumTable">
+                <thead>
+                  <tr>
+                    <th onclick="sortTable('pjtSumTable', 0, 'str')">프로젝트명</th>
+                    <th onclick="sortTable('pjtSumTable', 1, 'num')" class="num">초과건수</th>
+                    <th onclick="sortTable('pjtSumTable', 2, 'num')" class="num">총 초과금액</th>
+                    <th onclick="sortTable('pjtSumTable', 3, 'num')" class="num">평균 초과금액</th>
+                    <th onclick="sortTable('pjtSumTable', 4, 'num')" class="num">최대 초과금액</th>
+                    <th onclick="sortTable('pjtSumTable', 5, 'str')">주요 업무구분</th>
+                     <th onclick="sortTable('pjtSumTable', 6, 'str')" title="⛔ 고위험 정밀감사: 건수≥3 &amp; 금액≥1억 / ⚠️ 요주의: 건수≥2 / ✅ 일반: 그 외">위험 등급</th>
+                  </tr>
+                </thead>
+                <tbody id="sumPjtTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 협력업체별 관점 -->
+        <div id="sum-vendor" class="sum-sub-content">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+            <div class="card"><h3>📊 협력사별 리스크 카운트 Top 10</h3><div class="chart-wrap"><canvas id="sumChartVendorCnt"></canvas></div></div>
+            <div class="card"><h3>📊 협력사별 가액 집중도 Top 10</h3><div class="chart-wrap"><canvas id="sumChartVendorAmt"></canvas></div></div>
+          </div>
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
+              <span class="section-title" style="font-weight:800; font-size: 13.5px;">협력사별 상시 감사 인덱스</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <select id="sumVendorJobFilter" onchange="renderSummaryVendor()" style="padding: 6px 10px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 6px; outline: none; background: var(--bg); cursor: pointer; font-weight: 600; color: var(--text); min-width: 120px;">
+                  <option value="">업무구분: 전체</option>
+                </select>
+                <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); font-weight:600; background:var(--bg); border:1px solid var(--border); padding:5px 10px; border-radius:6px;">
+                  <span style="font-size:11.5px;">최소 감지:</span>
+                  <input type="number" id="sumVendorMinCnt" value="1" min="1" onchange="renderSummaryVendor()" style="width:32px; border:none; background:transparent; font-size:12.5px; outline:none; font-weight:700; color:var(--text); text-align:center;">
+                  <span style="font-size:11.5px;">건</span>
+                </div>
+                <input type="text" id="searchVendorInput" class="table-search-box" placeholder="🔍 협력사명 검색..." oninput="filterVendorTableLive()">
+              </div>
+            </div>
+            <div class="scrollable-table-wrap">
+              <table id="vendorSumTable">
+                <thead>
+                  <tr>
+                    <th onclick="sortTable('vendorSumTable', 0, 'str')">협력사</th>
+                    <th onclick="sortTable('vendorSumTable', 1, 'num')" class="num">초과건수</th>
+                    <th onclick="sortTable('vendorSumTable', 2, 'num')" class="num">총 초과금액</th>
+                    <th onclick="sortTable('vendorSumTable', 3, 'num')" class="num">평균 초과금액</th>
+                    <th onclick="sortTable('vendorSumTable', 4, 'num')" class="num">최대 초과금액</th>
+                    <th onclick="sortTable('vendorSumTable', 5, 'str')">주요 업무구분</th>
+                    <th onclick="sortTable('vendorSumTable', 6, 'str')" title="⛔ 고위험 정밀감사: 건수≥3 &amp; 금액≥1억 / ⚠️ 요주의: 건수≥2 / ✅ 일반: 그 외">위험 등급</th>
+                  </tr>
+                </thead>
+                <tbody id="sumVendorTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 기간 전후 비교 탭 -->
+      <div id="tab-compare" class="tab-content">
+        <div class="card" style="margin-bottom: 20px; padding: 18px 24px;">
+          <div class="cmp-layout-container">
+            <div class="cmp-setup-zone">
+              <h3 style="font-size:14px; margin-bottom: 4px;">📅 전후 모니터링 및 총괄 변동 세팅</h3>
+              <div class="cmp-date-grid">
+                <div class="cmp-date-box">
+                  <label>시작 날짜</label>
+                  <input type="date" id="cmpStart" onchange="syncSliderFromInput()">
+                </div>
+                <div class="cmp-date-box">
+                  <label style="color:#f97316; font-weight:800;">📍 기준 날짜 (After 포함)</label>
+                  <input type="date" id="cmpBase" onchange="syncSliderFromInput()">
+                </div>
+                <div class="cmp-date-box">
+                  <label>종료 날짜</label>
+                  <input type="date" id="cmpEnd" onchange="syncSliderFromInput()">
+                </div>
+                <div class="cmp-date-box">
+                  <label>기준 일자 필드</label>
+                  <select id="cmpCol" onchange="runCompare()" style="padding:6px 10px; font-size:12px; border:1px solid var(--border); border-radius:8px; background:var(--bg); min-width:110px;">
+                    <option value="품의일자">품의일자</option>
+                    <option value="계약(변경)일">계약(변경)일</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="timeline-slider-wrap">
+                <div class="slider-lbl">
+                  <span>시작일</span>
+                  <span style="color:#f97316; font-weight:800;">📍 기준점 (드래그 조절)</span>
+                  <span>종료일</span>
+                </div>
+                <div class="range-slider-container">
+                  <input type="range" id="slide_start" min="0" max="100" value="0" oninput="syncInputFromSlider('start')">
+                  <input type="range" id="slide_base" min="0" max="100" value="50" oninput="syncInputFromSlider('base')">
+                  <input type="range" id="slide_end" min="0" max="100" value="100" oninput="syncInputFromSlider('end')">
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; justify-content: space-between;">
+              <h3 style="font-size:14px; margin-bottom: 6px;">📊 전후 총괄 리스크 변동 현황</h3>
+              <div class="cmp-mini-kpi-grid">
+                <div class="cmp-mini-card">
+                  <span class="m-lbl">Before 구간 적발 (기준점 미만)</span>
+                  <span class="m-val" id="mini_bCnt" style="color:#64748b;">0건</span>
+                  <span class="m-sub" id="mini_bAmt">0.00억원</span>
+                </div>
+                <div class="cmp-mini-card cmp-divider-card">
+                  <span class="m-lbl">초과 변동폭</span>
+                  <span class="d-amt red" id="mini_diffCnt">▲0건</span>
+                  <span class="d-sub">건수 편차</span>
+                </div>
+                <div class="cmp-mini-card" style="border-color: #ffd8a8; background: #fff9db;">
+                  <span class="m-lbl" style="color: #e8590c;">After 구간 적발 (기준점 포함)</span>
+                  <span class="m-val" id="mini_aCnt" style="color:#f97316;">0건</span>
+                  <span class="m-sub" id="mini_aAmt" style="color: #e8590c;">0.00억원</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px;">
+          <h3>📊 전후 월별 변화 지표 (초과 건수 기준)</h3>
+          <div style="margin: 8px 0; font-size: 12.5px; display: flex; gap: 16px; font-weight: 600;">
+            <div><span style="display:inline-block; width:14px; height:14px; background:#cbd5e1; border-radius:3px; vertical-align:middle; margin-right:6px;"></span>Before 구간</div>
+            <div><span style="display:inline-block; width:14px; height:14px; background:#f97316; border-radius:3px; vertical-align:middle; margin-right:6px;"></span>After 구간</div>
+          </div>
+          <div class="chart-wrap" style="height:380px;"><canvas id="cmpMonthlyRatioChart"></canvas></div>
+          <div id="cmpDateNote" style="font-size:12px; color:var(--muted); margin-top:14px; background: var(--bg); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-weight: 500;"></div>
+        </div>
+      </div>
+
+      <!-- 초과 모니터링 상세 탭 -->
+      <div id="tab-detail" class="tab-content">
+        <div class="filter-bar">
+          <div style="flex: 1; min-width: 260px;">
+            <label>🔍 통합 다중 검색 (띄어쓰기로 구분 가능)</label>
+            <input type="text" id="fSearchKeyword" placeholder="예: 현대 안전 자재..." oninput="applyFilter()" style="width: 100%;">
+          </div>
+          <div>
+            <label>업무구분</label>
+            <select id="fJobType" onchange="applyFilter()">
+              <option value="">전체보기</option>
+            </select>
+          </div>
+          <div>
+            <label>사유분류</label>
+            <select id="fReason" onchange="applyFilter()">
+              <option value="">전체보기</option>
+            </select>
+          </div>
+          <div>
+            <label>하한선 설정 (만원)</label>
+            <input type="number" id="fMinAmt" value="0" step="100" onchange="applyFilter()" style="max-width: 120px;">
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-header-action" onclick="exportFilteredToExcel()" style="background: linear-gradient(135deg, var(--success), #059669); color:#fff; border:none; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2); font-weight: 700;">📊 엑셀 내보내기</button>
+            <button class="btn-header-action btn-header-reset" onclick="resetFilter()" style="font-weight: 700;">필터 초기화</button>
+          </div>
+        </div>
+        
+        <div class="card" style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <span class="section-title" style="font-weight:800; font-size: 13.5px;">⚠️ 요주의 한도 관리 대상 명세</span>
+            <span id="detailCount" style="font-size:12.5px; color:var(--muted); font-weight: 600;">검색 결과: 0건</span>
+          </div>
+          <div class="scrollable-table-wrap">
+            <table id="detailTable">
+              <thead>
+                <tr>
+                  <th class="no-sort" style="width: 50px;">No</th>
+                  <th data-key="계약건수">초과건수</th>
+                  <th data-key="협력사" class="sortable-asc">협력사</th>
+                  <th data-key="업무구분">업무구분</th>
+                  <th data-key="프로젝트명">프로젝트명</th>
+                  <th data-key="계약명">대표 계약명</th>
+                  <th data-key="공급금액합계" class="num">계약금액</th>
+                  <th data-key="초과금액" class="num">초과금액</th>
+                  <th data-key="사유분류">사유분류</th>
+                  <th data-key="변경사유">변경사유 요약</th>
+                  <th class="no-sort" style="width: 80px;">상세 명세</th>
+                </tr>
+              </thead>
+              <tbody id="detailTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 쪼개기/증액 의심 분석 탭 -->
+      <div id="tab-suspect" class="tab-content">
+        <div class="filter-bar">
+          <div style="flex: 1; min-width: 260px;">
+            <label>🔍 의심 계약 검색</label>
+            <input type="text" id="fSuspectSearchKeyword" placeholder="예: 현대 안전 자재..." oninput="applySuspectFilter()" style="width: 100%;">
+          </div>
+          <div>
+            <label>의심유형</label>
+            <select id="fSuspectType" onchange="applySuspectFilter()">
+              <option value="">전체보기</option>
+              <option value="쪼개기 발주 의심">쪼개기 발주 의심</option>
+              <option value="한도 임박 회피 의심">한도 임박 회피 의심</option>
+              <option value="다차수 증액 의심">다차수 증액 의심</option>
+            </select>
+          </div>
+          <div>
+            <label>업무구분</label>
+            <select id="fSuspectJobType" onchange="applySuspectFilter()">
+              <option value="">전체보기</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-header-action" onclick="exportSuspectToExcel()" style="background: linear-gradient(135deg, var(--danger), #dc2626); color:#fff; border:none; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2); font-weight: 700;">📊 의심명세 내보내기</button>
+            <button class="btn-header-action btn-header-reset" onclick="resetSuspectFilter()" style="font-weight: 700;">필터 초기화</button>
+          </div>
+        </div>
+        
+        <div class="card" style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <span class="section-title" style="font-weight:800; font-size: 13.5px; color: var(--danger);">⚠️ 쪼개기 계약 및 한도 우회 의심 거래 분석 리포트</span>
+            <span id="suspectCount" style="font-size:12.5px; color:var(--danger); font-weight: 600;">감지 건수: 0건</span>
+          </div>
+          <div class="scrollable-table-wrap">
+            <table id="suspectTable">
+              <thead>
+                <tr>
+                  <th class="no-sort" style="width: 50px;">No</th>
+                  <th data-key="의심유형" style="color: var(--danger);">의심유형</th>
+                  <th data-key="계약번호">계약번호</th>
+                  <th data-key="협력사" class="sortable-asc">협력사</th>
+                  <th data-key="프로젝트명">프로젝트명</th>
+                  <th data-key="계약명">계약명</th>
+                  <th data-key="해당계약가액" class="num">계약금액</th>
+                  <th data-key="변경차수">변경차수</th>
+                  <th>💡 리스크 소견</th>
+                </tr>
+              </thead>
+              <tbody id="suspectTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast">🔄 모든 분석 데이터 및 차트가 초기화되었습니다.</div>
+
+<!-- 개별 계약 세부 정보 팝업 모달 -->
+<div id="contractModal" class="modal-backdrop" onclick="closeContractModal(event)">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="modalTitle">🔍 개별 계약건 상세 정보</h3>
+      <button class="modal-close" onclick="closeContractModalDirect()">&times;</button>
+    </div>
+    <div class="modal-subheader">
+      <div id="modalSubtitle" style="font-weight: 800; font-size: 14.5px; color: var(--primary);">프로젝트 / 협력사 정보</div>
+      <div class="modal-info-pills">
+        <div id="modalCountPill" class="modal-pill">총 0건</div>
+        <div id="modalAmtPill" class="modal-pill danger">초과액 0원</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-table-wrap">
+        <table class="modal-table" id="modalTable">
+          <thead>
+            <tr id="modalTableHead">
+              <!-- 헤더 동적 생성 -->
+            </tr>
+          </thead>
+          <tbody id="modalTableBody">
+            <!-- 데이터 동적 생성 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-close" onclick="closeContractModalDirect()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const G = {
+  rawData: [], validRawRows: [], excessData: [], filteredData: [], suspectData: [],
+  projectSettings: {}, charts: {}, pjtSummaryCache: [], vendorSummaryCache: [],
+  jobSummaryCache: [], workSummaryCache: [],
+  detailSort: { key: '협력사', dir: 'asc' }, suspectSort: { key: '협력사', dir: 'asc' }, compareData: null,
+  tableSortStates: {},
+  minTimelineDate: null, maxTimelineDate: null
+};
+
+const REASON_MAP = {
+  "예외대상": ["예외대상", "예외 대상", "예외처리대상", "소액예외", "한도예외", "예외처리"],
+  "유일업체": ["유일업체", "유일 업체", "단독업체", "독점업체", "공급사 단일", "유일공급", "단일공급", "대안없음"],
+  "인허가/법요건": ["인허가", "인·허가", "법요건", "법적요건", "법령", "법규", "관계기관", "행정기관", "감리요청"],
+  "긴급발주": ["긴급", "긴급발주", "긴급공사", "긴급처리", "긴급복구", "시급", "응급", "비상"],
+  "안전관련": ["안전", "안전관련", "CCTV", "cctv", "안전시설", "안전강화", "산업안전", "안전관리"],
+  "발주처 사유": ["발주처", "도급변경", "설계변경", "도면변경", "공사범위", "수량 증가", "물량초과", "물가변동", "에스컬레이션", "공기연장"],
+  "단순변경": ["단순변경", "단순증액", "자재추가", "추가구매", "용역", "과업범위", "구조검토", "하자보수", "민원", "기타", "복합"]
+};
+
+const COLORS = ["#4f46e5","#ef4444","#f97316","#10b981","#8b5cf6","#06b6d4","#eab308","#854d0e","#475569","#0d9488"];
+
+function toNum(v) { 
+  if (typeof v === "number") return v; 
+  if (typeof v === "string") return parseFloat(v.replace(/[^0-9.\-]/g, "")) || 0; 
+  return 0; 
+}
+
+function fmtToEok(v) { return (v / 100000000).toFixed(2) + "억원"; }
+
+function parseDate(v) {
+  if (!v) return null;
+  if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
+  if (typeof v === "number") return new Date((v - 25569) * 86400 * 1000);
+  const str = String(v).trim();
+  const m = str.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+  const m2 = str.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (m2) return new Date(parseInt(m2[1]), parseInt(m2[2]) - 1, parseInt(m2[3]));
+  return null;
+}
+
+function getLimits() {
+  return {
+    equip: toNum(document.getElementById("lim_equip").value) * 10000,
+    mat_normal: toNum(document.getElementById("lim_mat_normal").value) * 10000,
+    mat_project: toNum(document.getElementById("lim_mat_project").value) * 10000,
+    mat_mix: toNum(document.getElementById("lim_mat_mix").value) * 10000,
+    work_normal: toNum(document.getElementById("lim_work_normal").value) * 10000,
+    work_project: toNum(document.getElementById("lim_work_project").value) * 10000
+  };
+}
+
+function classifyReason(txt) {
+  if (!txt) return "미분류";
+  for (const [cat, kws] of Object.entries(REASON_MAP)) {
+    if (kws.some(kw => txt.includes(kw))) return cat;
+  }
+  return "기타";
+}
+
+function findFuzzyVal(row, candidates) {
+  const keys = Object.keys(row);
+  for (const cand of candidates) {
+    if (row[cand] !== undefined && row[cand] !== "") return row[cand];
+    const cleanCand = cand.toLowerCase().replace(/[\s_\-()]/g, "");
+    for (const k of keys) {
+      if (k.toLowerCase().replace(/[\s_\-()]/g, "") === cleanCand) return row[k];
+    }
+  }
+  return undefined;
+}
+
+function normalizeRow(row) {
+  let rawJob = String(findFuzzyVal(row, ["업무구분", "구분", "업무", "계약구분"]) || "").trim();
+  if (rawJob === "업무구분" || rawJob === "구분") return null;
+  
+  let contractId = String(findFuzzyVal(row, ["계약번호", "문서번호", "번호"]) || "").trim();
+  let supplierName = String(findFuzzyVal(row, ["계약상대자", "상호", "협력사명", "업체명", "수급인"]) || "").trim();
+  let contractName = String(findFuzzyVal(row, ["계약명", "건명", "품의명", "문서명"]) || "").trim();
+  let sumVal = findFuzzyVal(row, ["공급금액합계", "공급가액합계", "총공급금액", "합계금액", "계약금액", "최종금액"]);
+  let totalAmount = toNum(sumVal);
+  
+  // '해당계약'의 공급가액을 유연하게 찾기 위한 로직 (다중 헤더 대응)
+  let curVal = findFuzzyVal(row, ["해당계약", "공급가액_해당계약", "원화금액", "공급가액(원화, 최종)", "공급가액(원화,최종)"]);
+  if (curVal === undefined || curVal === "") {
+    const keys = Object.keys(row);
+    for (const k of keys) {
+      const lowerK = k.toLowerCase();
+      if ((lowerK.includes("공급가액") || lowerK.includes("해당계약") || lowerK.includes("원화금액")) &&
+          !lowerK.includes("합계") && !lowerK.includes("총액") && !lowerK.includes("타계약")) {
+        curVal = row[k];
+        break;
+      }
+    }
+  }
+  let curAmount = toNum(curVal);
+
+  if (!rawJob && !contractId && !supplierName && !contractName && totalAmount === 0 && curAmount === 0) return null;
+
+  row["해당계약가액"] = curAmount > 0 ? curAmount : totalAmount;
+
+  if (sumVal !== undefined && sumVal !== "" && totalAmount > 0) {
+    row["공급가액누계"] = totalAmount;
+  } else {
+    const other = toNum(findFuzzyVal(row, ["타계약총액", "공급가액_타계약총액"]));
+    row["공급가액누계"] = (curAmount > 0 ? curAmount : totalAmount) + other;
+  }
+
+  row["공급금액합계"] = row["해당계약가액"];
+  row["업무구분"] = rawJob || "기타";
+  row["변경사유"] = String(findFuzzyVal(row, ["변경사유", "사유", "조정사유", "특이사항"]) || "").replace(/\n/g, " ").trim();
+  row["프로젝트명"] = String(findFuzzyVal(row, ["프로젝트명", "현장명", "프로젝트", "PJT명"]) || "미지정 현장").trim();
+  row["계약번호"] = contractId || "미발행";
+  row["협력사"] = supplierName || "미확인 협력사";
+  row["계약명"] = contractName || "미확인 계약명";
+  row["일반자재비"] = toNum(findFuzzyVal(row, ["일반자재비", "일반자재"]));
+  row["혼합골재금액"] = toNum(findFuzzyVal(row, ["혼합골재금액", "혼합골재"]));
+  let changeDegree = String(findFuzzyVal(row, ["변경차수", "차수", "변경번호", "차수구분"]) || "").trim();
+  row["변경차수"] = changeDegree;
+  return row;
+}
+
+function loadFile(e) { 
+  if (e.target.files.length) processExcelFile(e.target.files[0]); 
+}
+
+function processExcelFile(file) {
+  showToast("⏳ 원천 데이터셋 파싱 가동 중...");
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+      if (!json.length) { alert("파싱할 로우 데이터가 발견되지 않았습니다."); return; }
+
+      G.rawData = json.map(row => normalizeRow(row)).filter(Boolean);
+      document.getElementById("emptyGuideCard").classList.add("hidden");
+      document.getElementById("lastUpdated").textContent = `구매부서 | 정상 로드 완료 (${G.rawData.length}건)`;
+
+      initProjectSettings();
+      renderAsidePjtGrid();
+      initAnalysisDates();
+      runAnalysis();
+      showToast("✅ 데이터 정규화 및 마스터 분석 빌드 완료");
+    } catch (err) {
+      console.error(err);
+      alert("엑셀 구조 파싱 실패. 암호화 여부 또는 컬럼 정합성을 확인하세요.");
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function resetAllData() {
+  G.rawData = []; G.validRawRows = []; G.excessData = []; G.filteredData = []; G.suspectData = []; G.projectSettings = {}; G.pjtSummaryCache = []; G.vendorSummaryCache = []; G.tableSortStates = {}; G.detailSort = { key: '협력사', dir: 'asc' }; G.suspectSort = { key: '협력사', dir: 'asc' }; G.compareData = null;
+  Object.keys(G.charts).forEach(id => destroyChart(id));
+  document.getElementById("fileInput").value = "";
+  document.getElementById("asidePjtList").innerHTML = '<div style="text-align:center; color:var(--sidebar-muted); font-size:11px; padding:8px;">데이터를 업로드해주세요.</div>';
+  document.getElementById("asidePjtSearch").value = "";
+  document.getElementById("lastUpdated").textContent = "구매부서 | 데이터를 업로드해주세요";
+  document.getElementById("dashboardSection").classList.add("hidden");
+  document.getElementById("alertBanner").classList.remove("show");
+  document.getElementById("emptyGuideCard").classList.remove("hidden");
+  
+  document.getElementById("sumPjtJobFilter").innerHTML = '<option value="">전체</option>';
+  document.getElementById("sumWorkPjtFilter").innerHTML = '<option value="">전체</option>';
+  document.getElementById("sumVendorJobFilter").innerHTML = '<option value="">전체</option>';
+  document.getElementById("fJobType").innerHTML = '<option value="">전체보기</option>';
+  document.getElementById("fReason").innerHTML = '<option value="">전체보기</option>';
+  document.getElementById("fSuspectJobType").innerHTML = '<option value="">전체보기</option>';
+  if (document.getElementById("fSuspectSearchKeyword")) {
+    document.getElementById("fSuspectSearchKeyword").value = "";
+  }
+
+  // 신규 대시보드 돔 상태 초기화
+  if (document.getElementById("subtabCountInfo")) {
+    document.getElementById("subtabCountInfo").textContent = "";
+  }
+  const subtabJob = document.getElementById("btn-subtab-job");
+  const subtabReason = document.getElementById("btn-subtab-reason");
+  if (subtabJob && subtabReason) {
+    subtabJob.classList.add("active");
+    subtabReason.classList.remove("active");
+    document.getElementById("subtab-job-content").classList.remove("hidden");
+    document.getElementById("subtab-reason-content").classList.add("hidden");
+  }
+  const jobToggles = document.querySelectorAll("#subtab-job-content .btn-mini-toggle");
+  if (jobToggles.length >= 2) {
+    jobToggles[0].classList.add("active");
+    jobToggles[1].classList.remove("active");
+    document.getElementById("jobBarChartWrap").classList.remove("hidden");
+    document.getElementById("jobDoughnutChartWrap").classList.add("hidden");
+  }
+  const reasonToggles = document.querySelectorAll("#subtab-reason-content .btn-mini-toggle");
+  if (reasonToggles.length >= 2) {
+    reasonToggles[0].classList.add("active");
+    reasonToggles[1].classList.remove("active");
+    document.getElementById("reasonDoughnutChartWrap").classList.remove("hidden");
+    document.getElementById("reasonBarChartWrap").classList.add("hidden");
+  }
+
+  showToast("🔄 모든 분석 데이터 및 차트가 초기화되었습니다.");
+}
+
+function checkExcess(row, limits) {
+  const job = String(row["업무구분"] || "").trim(); 
+  const pjt = row["프로젝트명"]; 
+  const reason = row["변경사유"]; 
+  const isProject = G.projectSettings[pjt] === true; 
+  const total = row["공급금액합계"];
+  const flagSingle = Object.keys(row).some(k => (k.includes("단일계약") || k.includes("금액초과")) && String(row[k]).includes("●"));
+  const flagSplit = Object.keys(row).some(k => (k.includes("소액분할") || k.includes("PJT")) && String(row[k]).includes("●"));
+
+  let isExcess = false, excessAmt = 0;
+  
+  // Fuzzy Job Type Matching (현업 데이터 오차 대응)
+  if (job.includes("설비")) {
+    if (reason.includes("제한해제")) return { isExcess: false, excessAmt: 0, exceptType: "" };
+    excessAmt = Math.max(0, total - limits.equip); isExcess = total > limits.equip;
+  } else if (job.includes("자재")) {
+    const nLim = isProject ? limits.mat_project : limits.mat_normal;
+    if (row["일반자재비"] > 0 || row["혼합골재금액"] > 0) {
+      excessAmt = Math.max(0, row["일반자재비"] - nLim) + Math.max(0, row["혼합골재금액"] - limits.mat_mix); isExcess = excessAmt > 0;
+    } else {
+      excessAmt = Math.max(0, total - nLim); isExcess = total > nLim;
+    }
+  } else if (job.includes("공사") || job.includes("용역")) {
+    const limit = isProject ? limits.work_project : limits.work_normal;
+    excessAmt = Math.max(0, total - limit); isExcess = total > limit;
+  } else {
+    excessAmt = Math.max(0, total - limits.mat_normal); isExcess = total > limits.mat_normal;
+  }
+
+  if (!isExcess && (flagSingle || flagSplit)) isExcess = true;
+  let exceptType = "기준초과";
+  if (flagSingle && flagSplit) exceptType = "복합";
+  else if (flagSingle) exceptType = "단일초과";
+  else if (flagSplit) exceptType = "분할발주";
+  return { isExcess, excessAmt, exceptType };
+}
+
+function runAnalysis() {
+  if (!G.rawData.length) return;
+  const limits = getLimits(); G.excessData = [];
+  const startVal = document.getElementById("analysis_start_date").value; 
+  const endVal = document.getElementById("analysis_end_date").value;
+  const start = startVal ? new Date(startVal) : null; 
+  const end = endVal ? new Date(endVal) : null;
+  if (end) end.setHours(23, 59, 59, 999);
+
+  // 1. 날짜 필터링을 거친 유효 원본 계약만 추출
+  G.validRawRows = G.rawData.filter(row => {
+    const rDate = parseDate(row["품의일자"]) || parseDate(row["계약(변경)일"]);
+    if (rDate) {
+      if (start && rDate < start) return false;
+      if (end && rDate > end) return false;
+    }
+    return true;
+  });
+
+  // 2. 프로젝트명 + 협력사 단위로 그룹화
+  const groups = {};
+  G.validRawRows.forEach(row => {
+    const pjt = row["프로젝트명"] || "미지정 현장";
+    const vendor = row["협력사"] || "미확인 협력사";
+    const key = `${pjt}||${vendor}`;
+    if (!groups[key]) {
+      groups[key] = {
+        pjt: pjt,
+        vendor: vendor,
+        rows: []
+      };
+    }
+    groups[key].rows.push(row);
+  });
+
+  // 3. 그룹별 집계 및 초과 판정
+  Object.values(groups).forEach(group => {
+    // 그룹 내에서 공급가액누계가 가장 큰 행 찾기 (대표 계약)
+    let maxRow = group.rows[0];
+    let maxAmt = group.rows[0]["공급가액누계"] || 0;
+    group.rows.forEach(r => {
+      const curNuge = r["공급가액누계"] || 0;
+      if (curNuge > maxAmt) {
+        maxAmt = curNuge;
+        maxRow = r;
+      }
+    });
+
+    // 공급금액합계에 누계 최대값(maxAmt)을 임시 주입하여 한도 초과 정밀 계산
+    const calcRow = { ...maxRow, "공급금액합계": maxAmt };
+    const { isExcess, excessAmt, exceptType } = checkExcess(calcRow, limits);
+
+    // 그룹 대표 객체 생성 (기존 대시보드 구조와 데이터 명칭 호환)
+    const groupSummary = {
+      ...maxRow, // 대표 행의 정보를 물려받음
+      "프로젝트명": group.pjt,
+      "협력사": group.vendor,
+      "계약건수": group.rows.length,
+      "공급금액합계": maxAmt, // 공급가액 누계의 최대값을 대항 업체 누계액으로 설정
+      "초과금액": isExcess ? excessAmt : 0,
+      "사유분류": classifyReason(maxRow["변경사유"]),
+      "예외처리": isExcess ? exceptType : "정상",
+      "그룹계약목록": group.rows // 상세 팝업용 원본 리스트 저장
+    };
+
+    G.excessData.push(groupSummary);
+  });
+
+  // G.validRawRows 바인딩 및 전처리 적용 완료
+  
+  G.filteredData = G.excessData.filter(r => r["초과금액"] > 0 || r["예외처리"] !== "정상");
+  
+  // 쪼개기 발주 및 한도 우회 의심 거래 탐지 알고리즘 실행
+  G.suspectData = [];
+  Object.values(groups).forEach(group => {
+    const pjt = group.pjt;
+    const vendor = group.vendor;
+    const rows = group.rows;
+
+    // 1. 단기간 다회 계약 (쪼개기 발주 의심)
+    if (rows.length >= 2) {
+      const sortedRows = [...rows].sort((a, b) => {
+        const da = parseDate(a["품의일자"]) || parseDate(a["계약(변경)일"]) || new Date(0);
+        const db = parseDate(b["품의일자"]) || parseDate(b["계약(변경)일"]) || new Date(0);
+        return da - db;
+      });
+
+      for (let i = 0; i < sortedRows.length - 1; i++) {
+        const r1 = sortedRows[i];
+        const r2 = sortedRows[i+1];
+        const d1 = parseDate(r1["품의일자"]) || parseDate(r1["계약(변경)일"]);
+        const d2 = parseDate(r2["품의일자"]) || parseDate(r2["계약(변경)일"]);
+
+        if (d1 && d2) {
+          const diffDays = Math.abs(d2 - d1) / (1000 * 60 * 60 * 24);
+          if (diffDays <= 15) {
+            const job = String(r1["업무구분"] || "").trim();
+            const isProject = G.projectSettings[pjt] === true;
+            let limit = limits.mat_normal;
+            if (job.includes("설비")) limit = limits.equip;
+            else if (job.includes("자재")) limit = isProject ? limits.mat_project : limits.mat_normal;
+            else if (job.includes("공사") || job.includes("용역")) limit = isProject ? limits.work_project : limits.work_normal;
+
+            const a1 = r1["해당계약가액"] || 0;
+            const a2 = r2["해당계약가액"] || 0;
+
+            if (a1 <= limit && a2 <= limit && (a1 + a2) > limit) {
+              const r1_num = Math.round(a1).toLocaleString();
+              const r2_num = Math.round(a2).toLocaleString();
+              const lim_num = Math.round(limit).toLocaleString();
+              const tot_num = Math.round(a1+a2).toLocaleString();
+              const reasonDetail = `[간격: ${Math.round(diffDays)}일] 동일 현장/협력사 간 15일 이내 연속 계약 체결. 개별 금액(${r1_num}원 / ${r2_num}원)은 한도 이하이나, 합산 누계(${tot_num}원)가 한도 규정(${lim_num}원)을 초과함. (분할발주 우회 정황)`;
+              
+              G.suspectData.push({ ...r1, "의심유형": "쪼개기 발주 의심", "상세사유": reasonDetail });
+              G.suspectData.push({ ...r2, "의심유형": "쪼개기 발주 의심", "상세사유": reasonDetail });
+            }
+          }
+        }
+      }
+    }
+
+    // 2. 한도 임박 회피성 계약 (Limit Skirting) 의심
+    rows.forEach(r => {
+      const job = String(r["업무구분"] || "").trim();
+      const isProject = G.projectSettings[pjt] === true;
+      let limit = limits.mat_normal;
+      if (job.includes("설비")) limit = limits.equip;
+      else if (job.includes("자재")) limit = isProject ? limits.mat_project : limits.mat_normal;
+      else if (job.includes("공사") || job.includes("용역")) limit = isProject ? limits.work_project : limits.work_normal;
+
+      const amt = r["공급가액누계"] || r["해당계약가액"] || 0;
+      if (amt >= (limit * 0.9) && amt < limit) {
+        if (!G.suspectData.some(s => s["계약번호"] === r["계약번호"])) {
+          const amt_num = Math.round(amt).toLocaleString();
+          const lim_num = Math.round(limit).toLocaleString();
+          G.suspectData.push({
+            ...r,
+            "의심유형": "한도 임박 회피 의심",
+            "상세사유": `최종 계약 누계액(${amt_num}원)이 규정한도(${lim_num}원)의 90% 이상에 근접하여 한도 초과 심사를 회피하기 위한 금액 셋팅 정황이 관측됨.`
+          });
+        }
+      }
+    });
+
+    // 3. 비정상 다차수 증액 (Excessive Revision) 의심
+    rows.forEach(r => {
+      const chg = String(r["변경차수"] || "").trim();
+      const chgNum = parseInt(chg.replace(/[^0-9]/g, "")) || 0;
+      if (chgNum >= 3) {
+        const amt = r["해당계약가액"] || 0;
+        const nuge = r["공급가액누계"] || 0;
+        const otherAmt = nuge - amt;
+        if (otherAmt > 0 && (nuge / otherAmt) >= 1.5) {
+          if (!G.suspectData.some(s => s["계약번호"] === r["계약번호"])) {
+            const nuge_num = Math.round(nuge).toLocaleString();
+            G.suspectData.push({
+              ...r,
+              "의심유형": "다차수 증액 의심",
+              "상세사유": `계약 변경 차수가 ${chgNum}차에 달하고 누적 금액(${nuge_num}원)이 급증함. 한 번에 계약하지 않고 여러 차례 변경 계약을 통해 금액을 임의 증액시키는 우회 정황이 감지됨.`
+            });
+          }
+        }
+      }
+    });
+  });
+
+  // 중복 탐지 제거
+  const uniqueSuspects = [];
+  const suspectKeys = new Set();
+  G.suspectData.forEach(s => {
+    const key = `${s["계약번호"]}||${s["의심유형"]}`;
+    if (!suspectKeys.has(key)) {
+      suspectKeys.add(key);
+      uniqueSuspects.push(s);
+    }
+  });
+  G.suspectData = uniqueSuspects;
+
+  G.tableSortStates = {};
+  document.querySelectorAll("thead th").forEach(th => th.classList.remove("sortable-asc", "sortable-desc"));
+
+  document.getElementById("sumPjtJobFilter").innerHTML = '<option value="">전체</option>';
+  document.getElementById("sumWorkPjtFilter").innerHTML = '<option value="">전체</option>';
+  document.getElementById("sumVendorJobFilter").innerHTML = '<option value="">전체</option>';
+
+  renderDashboard();
+  renderDetailTable(G.filteredData);
+  populateFilters();
+  
+  renderSuspectTable(G.suspectData);
+  populateSuspectFilters();
+
+  document.getElementById("dashboardSection").classList.remove("hidden");
+  updateAlertBanner();
+  
+  const dashBtn = document.getElementById("btn-tab-dashboard");
+  if (dashBtn) switchTab('tab-dashboard', dashBtn);
+
+  const subtabJob = document.getElementById("btn-subtab-job");
+  if (subtabJob) {
+    switchDashboardSubTab('job', subtabJob);
+  }
+}
+
+function updateAlertBanner() {
+  const banner = document.getElementById("alertBanner"); 
+  const tot = G.filteredData.reduce((s, r) => s + r["초과금액"], 0);
+  if (G.filteredData.length > 0) {
+    document.getElementById("alertText").innerHTML = `리스크 인덱스: 전체 <strong>${G.validRawRows.length.toLocaleString()}건</strong> 실시간 모니터링 중, 한도 초과 <strong>${G.filteredData.length.toLocaleString()}개 조합</strong> 감지 — 산출 초과 가액: <strong>${fmtToEok(tot)}</strong>`;
+    banner.classList.add("show");
+  } else { banner.classList.remove("show"); }
+}
+
+function renderDashboard() {
+  const totAmt = G.filteredData.reduce((s, r) => s + r["초과금액"], 0); 
+  const totalLoadedCount = G.validRawRows.length;
+  const excessContractsCount = G.filteredData.reduce((sum, r) => sum + (r["그룹계약목록"] ? r["그룹계약목록"].length : 0), 0);
+  const normalContractsCount = totalLoadedCount - excessContractsCount;
+
+  document.getElementById("kpiRow").innerHTML = `
+    <div class="kpi-card"><div class="label">📋 총 로드 데이터</div><div class="value">${totalLoadedCount.toLocaleString()}건</div><div class="sub">날짜 필터링 적용 전체 모니터링 대상</div></div>
+    <div class="kpi-card red-indicator"><div class="label">⚠️ 한도 초과 분석 그룹</div><div class="value red">${G.filteredData.length.toLocaleString()}개 조합</div><div class="sub">동일 프로젝트 & 동일 협력사 간 합산 계약 분석 조합</div></div>
+    <div class="kpi-card red-indicator"><div class="label">💰 총 한도 초과 금액</div><div class="value red">${fmtToEok(totAmt)}</div><div class="sub">리스크 노출 총액</div></div>
+    <div class="kpi-card red-indicator" style="cursor:pointer;" onclick="switchTab('tab-suspect', document.getElementById('btn-tab-suspect'))"><div class="label">🔎 쪼개기/증액 의심 리스크</div><div class="value red">${G.suspectData.length.toLocaleString()}건</div><div class="sub">한도 회피성 쪼개기/증액 의심</div></div>`;
+  renderCharts();
+}
+
+function destroyChart(id) { 
+  if (G.charts[id]) { G.charts[id].destroy(); delete G.charts[id]; } 
+}
+
+function renderHtmlLegend(targetId, labels, bgColors) {
+  const target = document.getElementById(targetId); if (!target) return;
+  target.innerHTML = labels.map((lbl, idx) => `<div class="custom-legend-item"><span class="legend-dot" style="background:${bgColors[idx % bgColors.length]}"></span><span>${lbl}</span></div>`).join("");
+}
+
+function renderCharts() {
+  const dataList = G.filteredData;
+  if (!dataList || !dataList.length) return;
+
+  // 1. 월별 초과 계약 및 추이
+  destroyChart("line");
+  const monthMap = {};
+  dataList.forEach(r => {
+    const dObj = parseDate(r["품의일자"]) || parseDate(r["계약(변경)일"]);
+    if (dObj) {
+      const mKey = `${dObj.getFullYear()}-${String(dObj.getMonth()+1).padStart(2,'0')}`;
+      if (!monthMap[mKey]) monthMap[mKey] = { cnt: 0, amt: 0 };
+      monthMap[mKey].cnt += toNum(r["계약건수"]) || 1; 
+      monthMap[mKey].amt += r["초과금액"] || 0;
+    }
+  });
+  const mKeys = Object.keys(monthMap).sort();
+  document.getElementById("dashMonthTbody").innerHTML = (mKeys.length ? mKeys : ["데이터 없음"]).map(m => {
+    const val = monthMap[m] || { cnt: 0, amt: 0 };
+    return `<tr><td data-val="${m}">${m}</td><td class="num" data-val="${val.cnt}">${val.cnt}건</td><td class="num" data-val="${val.amt}" style="color:var(--primary); font-weight:700;">${fmtToEok(val.amt)}</td></tr>`;
+  }).join("");
+
+  G.charts["line"] = new Chart(document.getElementById("chartLine"), {
+    type: "bar",
+    data: { labels: mKeys.length ? mKeys : ["데이터 없음"], datasets: [{ label: "초과 건수", type: "line", data: mKeys.map(k => monthMap[k].cnt), borderColor: "#f97316", borderWidth: 3, pointBackgroundColor: "#f97316", pointRadius: 5, fill: false, yAxisID: "y1", order: 1 }, { label: "초과금액(억원)", data: mKeys.map(k => +(monthMap[k].amt/100000000).toFixed(2)), backgroundColor: "rgba(79, 70, 229, 0.85)", yAxisID: "y", order: 2 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 20, right: 10, left: 10 } },
+      scales: {
+        y: { title: { display: true, text: "억원" }, grace: '15%' },
+        y1: { position: "right", grid: { drawOnChartArea: false }, grace: '15%' }
+      }
+    },
+    plugins: [{
+      id: 'chartLineLabels',
+      afterDraw: function(chart) {
+        const ctx = chart.ctx; ctx.save(); ctx.font = "bold 11px Pretendard, sans-serif"; ctx.textAlign = "center";
+        const lineMeta = chart.getDatasetMeta(0);
+        lineMeta.data.forEach((point, idx) => {
+          const val = chart.data.datasets[0].data[idx];
+          if (val > 0 && point) {
+            const yZero = chart.scales.y.getPixelForValue(0);
+            const isClose = (yZero - point.y) < 28;
+            const yOffset = isClose ? -24 : -10;
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3.5;
+            ctx.strokeText(val + '건', point.x, point.y + yOffset);
+            ctx.fillStyle = "#ea580c";
+            ctx.fillText(val + '건', point.x, point.y + yOffset);
+          }
+        });
+        const barMeta = chart.getDatasetMeta(1);
+        barMeta.data.forEach((bar, idx) => {
+          const val = chart.data.datasets[1].data[idx];
+          if (val > 0 && bar) {
+            const yZero = chart.scales.y.getPixelForValue(0);
+            const yPos = yZero - 12;
+            ctx.strokeStyle = "rgba(15, 23, 42, 0.8)";
+            ctx.lineWidth = 3;
+            ctx.strokeText(val + '억', bar.x, yPos);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText(val + '억', bar.x, yPos);
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+
+  // 2. 업무별 관점 데이터 및 차트 렌더링
+  renderSummaryJob();
+
+  // 3. 초과 사유별 관점 데이터 및 차트 렌더링
+  renderSummaryWork();
+}
+
+function switchSummaryTab(id, btn) {
+  document.querySelectorAll(".sum-sub-content").forEach(t => t.classList.remove("active")); document.querySelectorAll("#summarySubTabBar .tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById(id).classList.add("active"); btn.classList.add("active");
+  if (id === "sum-pjt") renderSummaryPjt(); 
+  if (id === "sum-vendor") renderSummaryVendor();
+}
+
+function aggSummaryData(key, dataList = G.filteredData) {
+  const res = {};
+  dataList.forEach(r => {
+    const k = r[key] || "미분류"; if (!res[k]) res[k] = { cnt: 0, sum: 0, max: 0, single: 0, split: 0, rows: [] };
+    const addCnt = toNum(r["계약건수"]) || 1;
+    res[k].cnt += addCnt; res[k].sum += r["초과금액"]; res[k].max = Math.max(res[k].max, r["초과금액"]);
+    if (r["예외처리"] === "단일초과") res[k].single += addCnt; if (r["예외처리"] === "분할발주") res[k].split += addCnt; res[k].rows.push(r);
+  });
+  return res;
+}
+
+function topKey(rows, key) {
+  const counts = {}; rows.forEach(r => { counts[r[key]] = (counts[r[key]] || 0) + 1; });
+  let topK = "없음", maxC = 0; for (const [k, c] of Object.entries(counts)) if (c > maxC) { maxC = c; topK = k; } return topK;
+}
+
+function makeSummaryDoughnut(canvasId, centerId, legendId, labels, counts, amts) {
+  destroyChart(canvasId); 
+  G.charts[canvasId] = new Chart(document.getElementById(canvasId), {
+    type: "doughnut",
+    data: { labels, datasets: [{ data: counts, backgroundColor: COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+    plugins: [{
+      id: 'doughnutLabels',
+      afterDraw: function(chart) {
+        const ctx = chart.ctx; ctx.save(); ctx.font = "bold 11px Pretendard, sans-serif"; ctx.fillStyle = "#ffffff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const meta = chart.getDatasetMeta(0); const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+        meta.data.forEach((element, idx) => {
+          const val = chart.data.datasets[0].data[idx]; const percentage = (val / total) * 100;
+          if (val > 0 && percentage > 4 && element) {
+            const centerAngle = (element.startAngle + element.endAngle) / 2; const r = (element.innerRadius + element.outerRadius) / 2;
+            const x = element.x + Math.cos(centerAngle) * r; const y = element.y + Math.sin(centerAngle) * r;
+            ctx.strokeStyle = "rgba(15, 23, 42, 0.75)";
+            ctx.lineWidth = 2.5;
+            ctx.strokeText(val + '건', x, y);
+            ctx.fillText(val + '건', x, y);
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+  document.getElementById(centerId).innerHTML = `<div class="dc-cnt">${counts.reduce((a,b)=>a+b,0)}건</div><div class="dc-amt">${fmtToEok(amts.reduce((a,b)=>a+b,0))}</div>`;
+  renderHtmlLegend(legendId, labels, COLORS);
+}
+
+function switchDashboardSubTab(type, btn) {
+  document.getElementById("btn-subtab-job").classList.toggle("active", type === 'job');
+  document.getElementById("btn-subtab-reason").classList.toggle("active", type === 'reason');
+  document.getElementById("subtab-job-content").classList.toggle("hidden", type !== 'job');
+  document.getElementById("subtab-reason-content").classList.toggle("hidden", type !== 'reason');
+  
+  const jobCacheLength = G.jobSummaryCache ? G.jobSummaryCache.length : 0;
+  const workCacheLength = G.workSummaryCache ? G.workSummaryCache.length : 0;
+  document.getElementById("subtabCountInfo").textContent = type === 'job' 
+    ? `${jobCacheLength}개 업무 파트` 
+    : `${workCacheLength}개 사유 파트`;
+
+  if (type === 'job') {
+    if (G.charts["sumChartJob"]) G.charts["sumChartJob"].resize();
+    if (G.charts["sumPieJob"]) G.charts["sumPieJob"].resize();
+  } else {
+    if (G.charts["sumPieWork"]) G.charts["sumPieWork"].resize();
+    if (G.charts["sumChartWork"]) G.charts["sumChartWork"].resize();
+  }
+}
+
+function toggleJobChart(chartType, btn) {
+  const btnGroup = btn.parentNode.querySelectorAll(".btn-mini-toggle");
+  btnGroup.forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("jobBarChartWrap").classList.toggle("hidden", chartType !== 'bar');
+  document.getElementById("jobDoughnutChartWrap").classList.toggle("hidden", chartType !== 'doughnut');
+  if (chartType === 'bar' && G.charts["sumChartJob"]) G.charts["sumChartJob"].resize();
+  if (chartType === 'doughnut' && G.charts["sumPieJob"]) G.charts["sumPieJob"].resize();
+}
+
+function toggleReasonChart(chartType, btn) {
+  const btnGroup = btn.parentNode.querySelectorAll(".btn-mini-toggle");
+  btnGroup.forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("reasonBarChartWrap").classList.toggle("hidden", chartType !== 'bar');
+  document.getElementById("reasonDoughnutChartWrap").classList.toggle("hidden", chartType !== 'doughnut');
+  if (chartType === 'bar' && G.charts["sumChartWork"]) G.charts["sumChartWork"].resize();
+  if (chartType === 'doughnut' && G.charts["sumPieWork"]) G.charts["sumPieWork"].resize();
+}
+
+function renderSummaryJob() {
+  const g = aggSummaryData("업무구분"); const sorted = Object.entries(g).sort((a,b) => b[1].sum - a[1].sum);
+  G.jobSummaryCache = sorted;
+  
+  const activeSubTab = document.getElementById("btn-subtab-job") && document.getElementById("btn-subtab-job").classList.contains("active");
+  if (activeSubTab) {
+    document.getElementById("subtabCountInfo").textContent = `${sorted.length}개 업무 파트`;
+  }
+  
+  document.getElementById("summaryJobTable").querySelector("tbody").innerHTML = sorted.map(([k, v]) => `<tr onclick="openJobContractsModal('${k.replace(/'/g, "\\'")}')" style="cursor: pointer;"><td data-val="${k}"><strong>${k}</strong></td><td class="num" data-val="${v.cnt}">${v.cnt}개</td><td class="num" data-val="${v.sum}" style="color:var(--danger); font-weight:700;">${fmtToEok(v.sum)}</td></tr>`).join("");
+  destroyChart("sumChartJob");
+  G.charts["sumChartJob"] = new Chart(document.getElementById("sumChartJob"), {
+    type: "bar",
+    data: { labels: sorted.map(([k])=>k), datasets: [{ label: "건수", type: "line", data: sorted.map(([,v])=>v.cnt), borderColor: "#ef4444", borderWidth: 3, pointBackgroundColor: "#ef4444", yAxisID: "y1", order: 1 }, { label: "초과액(억원)", data: sorted.map(([,v])=>+(v.sum/100000000).toFixed(2)), backgroundColor: COLORS, yAxisID: "y", order: 2 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 20, right: 10, left: 10 } },
+      scales: {
+        y: { title: { display: true, text: "억원" }, grace: '15%' },
+        y1: { position: "right", grid: { drawOnChartArea: false }, grace: '15%' }
+      }
+    },
+    plugins: [{
+      id: 'sumChartJobLabels',
+      afterDraw: function(chart) {
+        const ctx = chart.ctx; ctx.save(); ctx.font = "bold 11px Pretendard, sans-serif"; ctx.textAlign = "center";
+        const lineMeta = chart.getDatasetMeta(0);
+        lineMeta.data.forEach((point, idx) => {
+          const val = chart.data.datasets[0].data[idx];
+          if (val > 0 && point) {
+            const yZero = chart.scales.y.getPixelForValue(0);
+            const isClose = (yZero - point.y) < 28;
+            const yOffset = isClose ? -24 : -10;
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3.5;
+            ctx.strokeText(val + '건', point.x, point.y + yOffset);
+            ctx.fillStyle = "#ef4444";
+            ctx.fillText(val + '건', point.x, point.y + yOffset);
+          }
+        });
+        const barMeta = chart.getDatasetMeta(1);
+        barMeta.data.forEach((bar, idx) => {
+          const val = chart.data.datasets[1].data[idx];
+          if (val > 0 && bar) {
+            const yZero = chart.scales.y.getPixelForValue(0);
+            const yPos = yZero - 12;
+            ctx.strokeStyle = "rgba(15, 23, 42, 0.8)";
+            ctx.lineWidth = 3;
+            ctx.strokeText(val + '억', bar.x, yPos);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText(val + '억', bar.x, yPos);
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+  
+  destroyChart("sumPieJob"); G.charts["sumPieJob"] = new Chart(document.getElementById("sumPieJob"), {
+    type: "doughnut",
+    data: { labels: sorted.map(([k])=>k), datasets: [{ data: sorted.map(([,v])=>v.cnt), backgroundColor: COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+    plugins: [{
+      id: 'sumPieJobLabels',
+      afterDraw: function(chart) {
+        const ctx = chart.ctx; ctx.save(); ctx.font = "bold 11px Pretendard, sans-serif"; ctx.fillStyle = "#ffffff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const meta = chart.getDatasetMeta(0); const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+        meta.data.forEach((element, idx) => {
+          const val = chart.data.datasets[0].data[idx]; const percentage = (val / total) * 100;
+          if (val > 0 && percentage > 4 && element) {
+            const centerAngle = (element.startAngle + element.endAngle) / 2; const r = (element.innerRadius + element.outerRadius) / 2;
+            const x = element.x + Math.cos(centerAngle) * r; const y = element.y + Math.sin(centerAngle) * r;
+            ctx.strokeStyle = "rgba(15, 23, 42, 0.75)";
+            ctx.lineWidth = 2.5;
+            ctx.strokeText(val + '건', x, y);
+            ctx.fillText(val + '건', x, y);
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+  document.getElementById("sumPieJobCenter").innerHTML = `<div class="dc-cnt">${sorted.reduce((s, [,v]) => s + v.cnt, 0)}건</div><div class="dc-amt">${fmtToEok(sorted.reduce((s, [,v]) => s + v.sum, 0))}</div>`;
+  renderHtmlLegend("sumPieJobLegend", sorted.map(([k])=>k), COLORS);
+}
+
+function buildPjtTableDOM(arr) {
+  document.getElementById("sumPjtTbody").innerHTML = arr.map(([k,v]) => {
+    const isHigh = v.cnt >= 3 && v.sum >= 100000000;
+    const grade = isHigh ? "⛔ 고위험 정밀감사" : (v.cnt >= 2 ? "⚠️ 요주의" : "✅ 일반");
+    const gradeColor = isHigh ? 'var(--danger)' : (v.cnt >= 2 ? 'var(--warning)' : 'var(--success)');
+    return `<tr onclick="openPjtContractsModal('${k.replace(/'/g, "\\'")}')" style="cursor: pointer;"><td data-val="${k}"><strong>${k}</strong></td><td class="num" data-val="${v.cnt}">${v.cnt}개</td><td class="num" data-val="${v.sum}" style="color:var(--danger);">${fmtToEok(v.sum)}</td><td class="num" data-val="${v.sum/v.cnt}">${fmtToEok(v.sum/v.cnt)}</td><td class="num" data-val="${v.max}">${fmtToEok(v.max)}</td><td data-val="${topKey(v.rows,"업무구분")}">${topKey(v.rows,"업무구분")}</td><td data-val="${grade}" style="font-weight:700; color: ${gradeColor}">${grade}</td></tr>`;
+  }).join("") || `<tr><td colspan="7" style="text-align:center; padding:15px;">매칭 현장 없음</td></tr>`;
+}
+
+function renderDetailTable(dataList) { sortAndRenderDetail(dataList); }
+
+function renderSummaryPjt() {
+  const allJobs = [...new Set(G.filteredData.map(r=>r["업무구분"]).filter(Boolean))].sort(); const sel = document.getElementById("sumPjtJobFilter");
+  if (sel.options.length <= 1) allJobs.forEach(j => { const o=document.createElement("option"); o.value=o.textContent=j; sel.appendChild(o); });
+  const f = sel.value; const tgtData = f ? G.filteredData.filter(r=>r["업무구분"]===f) : G.filteredData;
+  const pjtKey = Object.keys(aggSummaryData("프로젝트명", tgtData)).length ? "프로젝트명" : "소속 프로젝트명"; const gReal = aggSummaryData(pjtKey, tgtData);
+  
+  G.pjtSummaryCache = Object.entries(gReal).sort((a,b)=>b[1].sum - a[1].sum); buildPjtTableDOM(G.pjtSummaryCache);
+  const top10Cnt = [...G.pjtSummaryCache].sort((a,b)=>b[1].cnt - a[1].cnt).slice(0, 10);
+  destroyChart("sumChartPjtCnt"); G.charts["sumChartPjtCnt"] = new Chart(document.getElementById("sumChartPjtCnt"), {
+    type: "bar",
+    data: { labels: top10Cnt.map(([k])=>k.slice(0,10)), datasets: [{ label: "건수", data: top10Cnt.map(([,v])=>v.cnt), backgroundColor: "#f97316" }] },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { right: 25, top: 5, bottom: 5 } },
+      scales: { x: { grace: '15%' } }
+    },
+    plugins: [{
+      id: 'sumChartPjtCntLabels',
+      afterDraw: function(chart) {
+        const ctx = chart.ctx; ctx.save(); ctx.font = "bold 11px Pretendard, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, idx) => {
+          const val = chart.data.datasets[0].data[idx];
+          if (val > 0 && bar) {
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3.5;
+            ctx.strokeText(val + '건', bar.x + 6, bar.y);
+            ctx.fillStyle = "#475569";
+            ctx.fillText(val + '건', bar.x + 6, bar.y);
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+  const top10Amt = [...G.pjtSummaryCache].slice(0, 10);
+  destroyChart("sumChartPjtAmt"); G.charts["sumChartPjtAmt"] = new Chart(document.getElementById("sumChartPjtAmt"), {
+    type: "bar",
+    data: { labels: top10Amt.map(([k])=>k.slice(0,10)), datasets: [{ label: "초과액(억원)", data: top10Amt.map(([,v])=>+(v.sum/100000000).toFixed(2)), backgroundColor: "#4f46e5" }] },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { right: 25, top: 5, bottom: 5 } },
+      scales: { x: { grace: '15%' } }
+    },
+    plugins: [{
+      id: 'sumChartPjtAmtLabels',
+      afterDraw: function(chart) {
+        const ctx = chart.ctx; ctx.save(); ctx.font = "bold 11px Pretendard, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, idx) => {
+          const val = chart.data.datasets[0].data[idx];
+          if (val > 0 && bar) {
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3.5;
+            ctx.strokeText(val + '억', bar.x + 6, bar.y);
+            ctx.fillStyle = "#475569";
+            ctx.fillText(val + '억', bar.x + 6, bar.y);
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function filterPjtTableLive() {
+  const kw = document.getElementById("searchPjtInput").value.toLowerCase().trim();
+  buildPjtTableDOM(kw ? G.pjtSummaryCache.filter(([name]) => name.toLowerCase().includes(kw)) : G.pjtSummaryCache);
+}
+
+function renderSummaryWork() {
+  const allPjts = [...new Set(G.filteredData.map(r=>r["프로젝트명"]).filter(Boolean))].sort(); const sel = document.getElementById("sumWorkPjtFilter");
+  if (sel.options.length <= 1) allPjts.forEach(p => { const o=document.createElement("option"); o.value=o.textContent=p; sel.appendChild(o); });
+  const pf = sel.value; const data = pf ? G.filteredData.filter(r=>r["프로젝트명"]===pf) : G.filteredData;
+  const g = aggSummaryData("사유분류", data); const sorted = Object.entries(g).sort((a,b)=>b[1].sum - a[1].sum);
+  G.workSummaryCache = sorted;
+
+  const activeSubTab = document.getElementById("btn-subtab-reason") && document.getElementById("btn-subtab-reason").classList.contains("active");
+  if (activeSubTab) {
+    document.getElementById("subtabCountInfo").textContent = `${sorted.length}개 사유 파트`;
+  }
+
+  document.getElementById("sumWorkTbody").innerHTML = sorted.map(([k,v]) => `<tr onclick="openWorkContractsModal('${k.replace(/'/g, "\\'")}')" style="cursor: pointer;"><td data-val="${k}"><strong>${k}</strong></td><td class="num" data-val="${v.cnt}">${v.cnt}개</td><td class="num" data-val="${v.sum}" style="color:var(--danger);">${fmtToEok(v.sum)}</td></tr>`).join("");
+  makeSummaryDoughnut("sumPieWork", "sumPieWorkCenter", "sumPieWorkLegend", sorted.map(([k])=>k), sorted.map(([,v])=>v.cnt), sorted.map(([,v])=>v.sum));
+  destroyChart("sumChartWork"); G.charts["sumChartWork"] = new Chart(document.getElementById("sumChartWork"), {
+    type: "bar",
+    data: { labels: sorted.map(([k])=>k), datasets: [{ label: "초과액(억원)", data: sorted.map(([,v])=>+(v.sum/100000000).toFixed(2)), backgroundColor: COLORS }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 20 } },
+      scales: { y: { grace: '15%' } }
+    },
+    plugins: [{
+      id: 'sumChartWorkLabels',
+      afterDraw: function(chart) {
+        const ctx = chart.ctx; ctx.save(); ctx.font = "bold 11px Pretendard, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, idx) => {
+          const val = chart.data.datasets[0].data[idx];
+          if (val > 0 && bar) {
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3.5;
+            ctx.strokeText(val + '억', bar.x, bar.y - 6);
+            ctx.fillStyle = "#1e293b";
+            ctx.fillText(val + '억', bar.x, bar.y - 6);
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function renderSummaryVendor() {
+  const allJobs = [...new Set(G.filteredData.map(r=>r["업무구분"]).filter(Boolean))].sort(); const sel = document.getElementById("sumVendorJobFilter");
+  if (sel.options.length <= 1) allJobs.forEach(j => { const o=document.createElement("option"); o.value=o.textContent=j; sel.appendChild(o); });
+  const jf = sel.value; const minC = parseInt(document.getElementById("sumVendorMinCnt").value) || 1; const data = jf ? G.filteredData.filter(r=>r["업무구분"]===jf) : G.filteredData;
+
+  const vMap = {}; data.forEach(r => { const k = r["협력사"]; if (!vMap[k]) vMap[k] = { cnt:0, sum:0, max:0, rows:[] }; vMap[k].cnt += toNum(r["계약건수"]) || 1; vMap[k].sum += r["초과금액"]; vMap[k].max = Math.max(vMap[k].max, r["초과금액"]); vMap[k].rows.push(r); });
+  G.vendorSummaryCache = Object.entries(vMap).filter(([,v])=>v.cnt >= minC).sort((a,b)=>b[1].sum - a[1].sum); buildVendorTableDOM(G.vendorSummaryCache);
+
+  const top10Cnt = [...G.vendorSummaryCache].sort((a,b)=>b[1].cnt-a[1].cnt).slice(0,10);
+  destroyChart("sumChartVendorCnt"); G.charts["sumChartVendorCnt"] = new Chart(document.getElementById("sumChartVendorCnt"), {
+    type: "bar",
+    data: { labels: top10Cnt.map(([k])=>k.slice(0,10)), datasets: [{ label: "적발건수", data: top10Cnt.map(([,v])=>v.cnt), backgroundColor: "#8b5cf6" }] },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { right: 25, top: 5, bottom: 5 } },
+      scales: { x: { grace: '15%' } }
+    },
+    plugins: [{
+      id: 'sumChartVendorCntLabels',
+      afterDraw: function(chart) {
+        const ctx = chart.ctx; ctx.save(); ctx.font = "bold 11px Pretendard, sans-serif"; ctx.fillStyle = "#475569"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, idx) => {
+          const val = chart.data.datasets[0].data[idx];
+          if (val > 0 && bar) {
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3.5;
+            ctx.strokeText(val + '건', bar.x + 6, bar.y);
+            ctx.fillText(val + '건', bar.x + 6, bar.y);
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+  const top10Amt = [...G.vendorSummaryCache].slice(0,10);
+  destroyChart("sumChartVendorAmt"); G.charts["sumChartVendorAmt"] = new Chart(document.getElementById("sumChartVendorAmt"), {
+    type: "bar",
+    data: { labels: top10Amt.map(([k])=>k.slice(0,10)), datasets: [{ label: "초과액(억원)", data: top10Amt.map(([,v])=>+(v.sum/100000000).toFixed(2)), backgroundColor: "#06b6d4" }] },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { right: 25, top: 5, bottom: 5 } },
+      scales: { x: { grace: '15%' } }
+    },
+    plugins: [{
+      id: 'sumChartVendorAmtLabels',
+      afterDraw: function(chart) {
+        const ctx = chart.ctx; ctx.save(); ctx.font = "bold 11px Pretendard, sans-serif"; ctx.fillStyle = "#475569"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, idx) => {
+          const val = chart.data.datasets[0].data[idx];
+          if (val > 0 && bar) {
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3.5;
+            ctx.strokeText(val + '억', bar.x + 6, bar.y);
+            ctx.fillText(val + '억', bar.x + 6, bar.y);
+          }
+        });
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function buildVendorTableDOM(arr) {
+  document.getElementById("sumVendorTbody").innerHTML = arr.map(([k,v]) => {
+    const isHigh = v.cnt >= 3 && v.sum >= 100000000;
+    const grade = isHigh ? "⛔ 고위험 정밀감사" : (v.cnt >= 2 ? "⚠️ 요주의" : "✅ 일반");
+    return `<tr onclick="openVendorContractsModal('${k.replace(/'/g, "\\'")}')" style="cursor: pointer;"><td data-val="${k}"><strong>${k}</strong></td><td class="num" data-val="${v.cnt}">${v.cnt}개</td><td class="num" data-val="${v.sum}" style="color:var(--danger);">${fmtToEok(v.sum)}</td><td class="num" data-val="${v.sum/v.cnt}">${fmtToEok(v.sum/v.cnt)}</td><td class="num" data-val="${v.max}">${fmtToEok(v.max)}</td><td data-val="${topKey(v.rows,"업무구분")}">${topKey(v.rows,"업무구분")}</td><td data-val="${grade}" style="font-weight:700; color: ${isHigh ? 'var(--danger)' : (v.cnt>=2 ? 'var(--warning)' : 'var(--success)')}">${grade}</td></tr>`;
+  }).join("") || `<tr><td colspan="7" style="text-align:center; padding:15px;">조건 부합 협력사 없음</td></tr>`;
+}
+
+function filterVendorTableLive() {
+  const kw = document.getElementById("searchVendorInput").value.toLowerCase().trim();
+  buildVendorTableDOM(kw ? G.vendorSummaryCache.filter(([name]) => name.toLowerCase().includes(kw)) : G.vendorSummaryCache);
+}
+
+function sortAndRenderDetail(dataList) {
+  const key = G.detailSort.key; const dir = G.detailSort.dir; const arr = [...dataList];
+  if (key) {
+    arr.sort((a,b) => {
+      let av = a[key], bv = b[key];
+      if (key === "공급금액합계" || key === "초과금액" || key === "계약건수") { av = toNum(av); bv = toNum(bv); }
+      else av = String(av ?? ""), bv = String(bv ?? "");
+      if (av < bv) return dir === "asc" ? -1 : 1; if (av > bv) return dir === "asc" ? 1 : -1; return 0;
+    });
+  }
+  document.getElementById("detailCount").textContent = `검색 결과: ${arr.length}건`;
+  document.getElementById("detailTbody").innerHTML = arr.map((r, i) => `<tr><td>${i+1}</td><td data-val="${r["계약건수"]}">${r["계약건수"]}건</td><td data-val="${r["협력사"]}"><strong>${r["협력사"]}</strong></td><td data-val="${r["업무구분"]}"><span class="badge badge-normal">${r["업무구분"]}</span></td><td data-val="${r["프로젝트명"]}">${r["프로젝트명"]}</td><td title="${r["계약명"]}" data-val="${r["계약명"]}">${r["계약명"].length>20?r["계약명"].slice(0,20)+'…':r["계약명"]}</td><td class="num" data-val="${r["공급금액합계"]}">${Math.round(r["공급금액합계"]).toLocaleString()}원</td><td class="num" data-val="${r["초과금액"]}" style="color:var(--danger); font-weight:700;">${Math.round(r["초과금액"]).toLocaleString()}원</td><td data-val="${r["사유분류"]}">${r["사유분류"]}</td><td title="${r["변경사유"]}" data-val="${r["변경사유"]}">${r["변경사유"].length>20?r["변경사유"].slice(0,20)+'…':r["변경사유"]}</td><td><button onclick="openGroupContractsModal('${r["프로젝트명"].replace(/'/g, "\\'")}', '${r["협력사"].replace(/'/g, "\\'")}')" style="padding:4px 8px; font-size:11px; cursor:pointer; background: var(--primary); color: #fff; border: none; border-radius: 4px;">상세조회</button></td></tr>`).join("") || `<tr><td colspan="11" style="text-align:center; padding:40px; color:var(--muted);">조회 결과 리스크 청정 구역입니다.</td></tr>`;
+}
+
+function bindDetailSortHandlers() {
+  document.querySelectorAll("#detailTable thead th[data-key]").forEach(th => {
+    th.onclick = () => {
+      const k = th.getAttribute("data-key");
+      if (G.detailSort.key === k) G.detailSort.dir = G.detailSort.dir === "asc" ? "desc" : "asc";
+      else { G.detailSort.key = k; G.detailSort.dir = "asc"; }
+      document.querySelectorAll("#detailTable thead th[data-key]").forEach(x => x.classList.remove("sortable-asc","sortable-desc"));
+      th.classList.add(G.detailSort.dir === "asc" ? "sortable-asc" : "sortable-desc");
+      applyFilter();
+    };
+  });
+}
+
+function populateFilters() {
+  const jobSel = document.getElementById("fJobType");
+  const reasonSel = document.getElementById("fReason");
+  const prevJob = jobSel.value;
+  const prevReason = reasonSel.value;
+
+  const jobs = [...new Set(G.filteredData.map(r=>r["업무구분"]).filter(Boolean))].sort();
+  const rss = [...new Set(G.filteredData.map(r=>r["사유분류"]).filter(Boolean))].sort();
+
+  jobSel.innerHTML = `<option value="">전체보기</option>` + jobs.map(j=>`<option>${j}</option>`).join("");
+  reasonSel.innerHTML = `<option value="">전체보기</option>` + rss.map(r=>`<option>${r}</option>`).join("");
+
+  if (jobs.includes(prevJob)) jobSel.value = prevJob;
+  if (rss.includes(prevReason)) reasonSel.value = prevReason;
+}
+
+function applyFilter() {
+  const job = document.getElementById("fJobType").value;
+  const rs = document.getElementById("fReason").value;
+  const mn = (parseInt(document.getElementById("fMinAmt").value) || 0) * 10000;
+  const kw = document.getElementById("fSearchKeyword") ? document.getElementById("fSearchKeyword").value.toLowerCase().trim() : "";
+
+  const target = G.filteredData.filter(r => {
+    const matchJob = !job || r["업무구분"] === job;
+    const matchReason = !rs || r["사유분류"] === rs;
+    const matchAmt = r["초과금액"] >= mn;
+    
+    let matchKeyword = true;
+    if (kw) {
+      // 다중 단어 공백 구분 교집합 (AND) 정밀 검색 고도화
+      const terms = kw.split(/\s+/).filter(Boolean);
+      const targetText = `${r["계약번호"]} ${r["계약명"]} ${r["협력사"]} ${r["프로젝트명"]} ${r["변경사유"]} ${r["계약상대자"]}`.toLowerCase();
+      matchKeyword = terms.every(term => targetText.includes(term));
+    }
+    
+    return matchJob && matchReason && matchAmt && matchKeyword;
+  });
+
+  sortAndRenderDetail(target);
+}
+
+function resetFilter() {
+  document.getElementById("fJobType").value = "";
+  document.getElementById("fReason").value = "";
+  document.getElementById("fMinAmt").value = 0;
+  if (document.getElementById("fSearchKeyword")) {
+    document.getElementById("fSearchKeyword").value = "";
+  }
+  sortAndRenderDetail(G.filteredData);
+}
+
+function exportFilteredToExcel() {
+  if (!G.filteredData.length) { alert("내보낼 데이터가 없습니다."); return; }
+  
+  const job = document.getElementById("fJobType").value;
+  const rs = document.getElementById("fReason").value;
+  const mn = (parseInt(document.getElementById("fMinAmt").value) || 0) * 10000;
+  const kw = document.getElementById("fSearchKeyword") ? document.getElementById("fSearchKeyword").value.toLowerCase().trim() : "";
+
+  const target = G.filteredData.filter(r => {
+    const matchJob = !job || r["업무구분"] === job;
+    const matchReason = !rs || r["사유분류"] === rs;
+    const matchAmt = r["초과금액"] >= mn;
+    
+    let matchKeyword = true;
+    if (kw) {
+      const terms = kw.split(/\s+/).filter(Boolean);
+      const targetText = `${r["계약번호"]} ${r["계약명"]} ${r["협력사"]} ${r["프로젝트명"]} ${r["변경사유"]} ${r["계약상대자"]}`.toLowerCase();
+      matchKeyword = terms.every(term => targetText.includes(term));
+    }
+    return matchJob && matchReason && matchAmt && matchKeyword;
+  });
+
+  if (!target.length) { alert("현재 필터링된 조건에 부합하는 리스크 내역이 없습니다."); return; }
+
+  const exportData = target.map((r, i) => ({
+    "No": i + 1,
+    "계약번호": r["계약번호"],
+    "협력사": r["협력사"],
+    "업무구분": r["업무구분"],
+    "소속 프로젝트명": r["프로젝트명"],
+    "계약명": r["계약명"],
+    "최종 공급가액(원)": Math.round(r["공급금액합계"]),
+    "규정 초과액(원)": Math.round(r["초과금액"]),
+    "사유분류": r["사유분류"],
+    "현장 변경사유 요약": r["변경사유"]
+  }));
+  
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  
+  // Set Column widths
+  worksheet['!cols'] = [
+    {wch: 5},   // No
+    {wch: 16},  // 계약번호
+    {wch: 26},  // 협력사
+    {wch: 12},  // 업무구분
+    {wch: 26},  // 소속 프로젝트명
+    {wch: 36},  // 계약명
+    {wch: 18},  // 최종 공급가액
+    {wch: 18},  // 규정 초과액
+    {wch: 16},  // 사유분류
+    {wch: 45}   // 현장 변경사유 요약
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "소액수의 초과 명세");
+  
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  XLSX.writeFile(workbook, `소액수의계약_초과_통제_명세_${dateStr}.xlsx`);
+  showToast("📊 필터링 결과 엑셀 리포트 출력 완료!");
+}
+
+function switchTab(id, btn) {
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active")); document.querySelectorAll(".tab-bar .tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById(id).classList.add("active"); btn.classList.add("active");
+  if (id === "tab-summary") { 
+    const activeSubBtn = document.querySelector("#summarySubTabBar .tab-btn.active") || document.querySelector("#summarySubTabBar .tab-btn"); 
+    activeSubBtn.click(); 
+  }
+  if (id === "tab-compare") runCompare();
+}
+
+function initAnalysisDates() {
+  let dates = G.rawData.map(r => parseDate(r["품의일자"]) || parseDate(r["계약(변경)일"])).filter(Boolean);
+  if (dates.length > 0) {
+    dates.sort((a,b) => a - b);
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    
+    G.minTimelineDate = dates[0];
+    G.maxTimelineDate = dates[dates.length - 1];
+    
+    document.getElementById("analysis_start_date").value = fmt(G.minTimelineDate);
+    document.getElementById("analysis_end_date").value = fmt(G.maxTimelineDate);
+    
+    document.getElementById("cmpStart").value = fmt(G.minTimelineDate);
+    document.getElementById("cmpEnd").value = fmt(G.maxTimelineDate);
+    
+    const midDate = dates[Math.floor(dates.length / 2)];
+    document.getElementById("cmpBase").value = fmt(midDate);
+    
+    syncSliderPositions();
+  }
+}
+
+function syncSliderPositions() {
+  if (!G.minTimelineDate || !G.maxTimelineDate) return;
+  const totalMs = G.maxTimelineDate.getTime() - G.minTimelineDate.getTime();
+  if (totalMs <= 0) return;
+
+  const sVal = new Date(document.getElementById("cmpStart").value).getTime();
+  const bVal = new Date(document.getElementById("cmpBase").value).getTime();
+  const eVal = new Date(document.getElementById("cmpEnd").value).getTime();
+
+  document.getElementById("slide_start").value = ((sVal - G.minTimelineDate.getTime()) / totalMs) * 100;
+  document.getElementById("slide_base").value = ((bVal - G.minTimelineDate.getTime()) / totalMs) * 100;
+  document.getElementById("slide_end").value = ((eVal - G.minTimelineDate.getTime()) / totalMs) * 100;
+}
+
+function syncInputFromSlider(type) {
+  if (!G.minTimelineDate || !G.maxTimelineDate) return;
+  const totalMs = G.maxTimelineDate.getTime() - G.minTimelineDate.getTime();
+  
+  let sPct = parseFloat(document.getElementById("slide_start").value);
+  let bPct = parseFloat(document.getElementById("slide_base").value);
+  let ePct = parseFloat(document.getElementById("slide_end").value);
+
+  if (type === 'start' && sPct > bPct) { bPct = sPct; document.getElementById("slide_base").value = bPct; }
+  if (type === 'base') {
+    if (bPct < sPct) { sPct = bPct; document.getElementById("slide_start").value = sPct; }
+    if (bPct > ePct) { ePct = bPct; document.getElementById("slide_end").value = ePct; }
+  }
+  if (type === 'end' && ePct < bPct) { bPct = ePct; document.getElementById("slide_base").value = bPct; }
+
+  const fmt = (ms) => {
+    const d = new Date(ms);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  document.getElementById("cmpStart").value = fmt(G.minTimelineDate.getTime() + (totalMs * (sPct / 100)));
+  document.getElementById("cmpBase").value = fmt(G.minTimelineDate.getTime() + (totalMs * (bPct / 100)));
+  document.getElementById("cmpEnd").value = fmt(G.minTimelineDate.getTime() + (totalMs * (ePct / 100)));
+
+  runCompare();
+}
+
+function syncSliderFromInput() {
+  const sStr = document.getElementById("cmpStart").value;
+  const bStr = document.getElementById("cmpBase").value;
+  const eStr = document.getElementById("cmpEnd").value;
+  if (!sStr || !bStr || !eStr) return;
+
+  let sDate = new Date(sStr); let bDate = new Date(bStr); let eDate = new Date(eStr);
+  
+  if (sDate > bDate) { bDate = sDate; document.getElementById("cmpBase").value = sStr; }
+  if (bDate > eDate) { eDate = bDate; document.getElementById("cmpEnd").value = document.getElementById("cmpBase").value; }
+
+  syncSliderPositions();
+  runCompare();
+}
+
+function runCompare() {
+  const bS = document.getElementById("cmpStart").value;
+  const bBase = document.getElementById("cmpBase").value;
+  const aE = document.getElementById("cmpEnd").value;
+  if (!bS || !bBase || !aE) return;
+
+  const colKey = document.getElementById("cmpCol").value;
+  const dStart = new Date(bS);
+  const dBase = new Date(bBase);
+  const dEnd = new Date(aE);
+  
+  dEnd.setHours(23, 59, 59, 999);
+
+  const before = [], after = [];
+  G.filteredData.forEach(r => {
+    const d = parseDate(r[colKey]);
+    if (d) {
+      if (d >= dStart && d < dBase) before.push(r);
+      if (d >= dBase && d <= dEnd) after.push(r);
+    }
+  });
+
+  const bA = before.reduce((s,r)=>s+r["초과금액"],0);
+  const aA = after.reduce((s,r)=>s+r["초과금액"],0);
+  const dC = after.length - before.length;
+
+  document.getElementById("mini_bCnt").textContent = `${before.length.toLocaleString()}건`;
+  document.getElementById("mini_bAmt").textContent = fmtToEok(bA);
+  document.getElementById("mini_aCnt").textContent = `${after.length.toLocaleString()}건`;
+  document.getElementById("mini_aAmt").textContent = fmtToEok(aA);
+  
+  document.getElementById("mini_diffCnt").className = "d-amt " + (dC >= 0 ? "red" : "success");
+  document.getElementById("mini_diffCnt").textContent = `${dC >= 0 ? '▲' : '▼'}${Math.abs(dC).toLocaleString()}건`;
+
+  document.getElementById("cmpDateNote").innerHTML = `기준 일자 필드: <strong>${colKey}</strong> | Before 대조구간: <strong>${bS} ~ ${fmtTimelinePrevDay(dBase)}</strong> | After 관측구간(기준점포함): <strong>${bBase} ~ ${aE}</strong>`;
+
+  const monthMap = {};
+  G.filteredData.forEach(r => {
+    const d = parseDate(r[colKey]); if (!d) return;
+    const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    if (!monthMap[m]) monthMap[m] = { totalCnt: 0, projSet: new Set() };
+    
+    if ((d >= dStart && d < dBase) || (d >= dBase && d <= dEnd)) {
+      monthMap[m].totalCnt += 1; monthMap[m].projSet.add(r["프로젝트명"]);
+    }
+  });
+
+  const months = Object.keys(monthMap).filter(m => monthMap[m].totalCnt > 0).sort();
+  const labels = months.length ? months : ["데이터 없음"];
+  const ratioValues = months.map(m => { const o = monthMap[m]; return o.totalCnt; });
+
+  const beforeValues = []; const afterValues = [];
+  const bgColors = months.map((m, idx) => {
+    const tokens = m.split('-'); const currentMonthDate = new Date(parseInt(tokens[0]), parseInt(tokens[1]) - 1, 1);
+    const val = ratioValues[idx];
+    const checkTarget = new Date(dBase.getFullYear(), dBase.getMonth(), 1);
+    if (currentMonthDate >= checkTarget) { afterValues.push(val); return "#f97316"; }
+    beforeValues.push(val); return "#cbd5e1";
+  });
+
+  const beforeAvg = beforeValues.length ? (beforeValues.reduce((a,b)=>a+b,0) / beforeValues.length) : 0;
+  const afterAvg = afterValues.length ? (afterValues.reduce((a,b)=>a+b,0) / afterValues.length) : 0;
+
+  if (G.charts["cmpMonthlyRatioChart"]) destroyChart("cmpMonthlyRatioChart");
+  const ctxEl = document.getElementById("cmpMonthlyRatioChart"); if (!ctxEl) return;
+
+  G.charts["cmpMonthlyRatioChart"] = new Chart(ctxEl, {
+    type: "bar",
+    data: { labels, datasets: [{ label: "초과 건수", data: ratioValues, backgroundColor: bgColors, borderColor: bgColors.map(c => c === "#f97316" ? "#ea580c" : "#94a3b8"), borderWidth: 1, barPercentage: 0.55 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      layout: { padding: { top: 25 } },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: "지표 수치" }, grid: { color: "#f1f5f9" }, grace: '15%', suggestedMax: Math.max(...ratioValues, beforeAvg, afterAvg, 1) * 1.3 },
+        x: { grid: { display: false } }
+      }
+    },
+    plugins: [{
+      id: 'customLinesAndLabels',
+      afterDraw: function(chart) {
+        const ctx = chart.ctx; const xAxis = chart.scales.x; const yAxis = chart.scales.y; const chartArea = chart.chartArea;
+        if (!xAxis || !yAxis) return;
+        ctx.save(); ctx.font = "bold 12px Pretendard, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+        chart.data.datasets.forEach(function(dataset, i) {
+          const meta = chart.getDatasetMeta(i);
+          meta.data.forEach(function(bar, index) {
+            const dataVal = dataset.data[index];
+            if(dataVal > 0 && bar) {
+              const labelColor = bgColors[index] === "#f97316" ? "#e8590c" : "#475569";
+              ctx.strokeStyle = "#ffffff";
+              ctx.lineWidth = 3.5;
+              ctx.strokeText(dataVal + '건', bar.x, bar.y - 6);
+              ctx.fillStyle = labelColor;
+              ctx.fillText(dataVal + '건', bar.x, bar.y - 6);
+            }
+          });
+        });
+        ctx.restore();
+
+        if (beforeValues.length > 0) {
+          ctx.save(); const beforeY = yAxis.getPixelForValue(beforeAvg); let startX = chartArea.left;
+          let endX = xAxis.getPixelForValue(beforeValues.length - 1) + (xAxis.width / labels.length) / 2;
+          if (isNaN(endX)) endX = chartArea.right / 2;
+          ctx.beginPath(); ctx.lineWidth = 2.5; ctx.strokeStyle = "#475569"; ctx.setLineDash([6, 4]); ctx.moveTo(startX, beforeY); ctx.lineTo(endX, beforeY); ctx.stroke();
+          ctx.setLineDash([]); ctx.fillStyle = "#334155"; ctx.font = "bold 12px Pretendard, sans-serif"; ctx.textAlign = "left"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 4; ctx.strokeText(`Before 평균: ${beforeAvg.toFixed(1)}건`, startX + 10, beforeY - 6); ctx.fillText(`Before 평균: ${beforeAvg.toFixed(1)}건`, startX + 10, beforeY - 6); ctx.restore();
+        }
+        if (afterValues.length > 0) {
+          ctx.save(); const afterY = yAxis.getPixelForValue(afterAvg); let startX = xAxis.getPixelForValue(beforeValues.length) - (xAxis.width / labels.length) / 2;
+          if (isNaN(startX)) startX = chartArea.right / 2;
+          let endX = chartArea.right;
+          ctx.beginPath(); ctx.lineWidth = 2.5; ctx.strokeStyle = "#e8590c"; ctx.setLineDash([6, 4]); ctx.moveTo(startX, afterY); ctx.lineTo(endX, afterY); ctx.stroke();
+          ctx.setLineDash([]); ctx.fillStyle = "#e8590c"; ctx.font = "bold 12px Pretendard, sans-serif"; ctx.textAlign = "right"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 4; ctx.strokeText(`After 평균: ${afterAvg.toFixed(1)}건`, endX - 10, afterY - 6); ctx.fillText(`After 평균: ${afterAvg.toFixed(1)}건`, endX - 10, afterY - 6); ctx.restore();
+        }
+      }
+    }]
+  });
+}
+
+function fmtTimelinePrevDay(dObj) {
+  const t = new Date(dObj.getTime()); t.setDate(t.getDate() - 1);
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+}
+
+function initProjectSettings() { 
+  G.rawData.forEach(r => {
+    const p = r["프로젝트명"];
+    if (G.projectSettings[p] === undefined) {
+      const defaultProjects = ["신안산선", "GTX", "탕정", "서리풀", "G5", "글로벌센터"];
+      G.projectSettings[p] = p ? defaultProjects.some(kw => p.includes(kw)) : false;
+    }
+  }); 
+}
+
+function renderAsidePjtGrid() {
+  const pjts = [...new Set(G.rawData.map(r => r["프로젝트명"]).filter(Boolean))].sort(); const kw = document.getElementById("asidePjtSearch").value.toLowerCase();
+  const filtered = kw ? pjts.filter(p => p.toLowerCase().includes(kw)) : pjts;
+  document.getElementById("asidePjtList").innerHTML = filtered.map(p => `<label class="aside-pjt-item ${G.projectSettings[p]?'is-pjt':''}"><input type="checkbox" ${G.projectSettings[p]?'checked':''} onchange="G.projectSettings['${p.replace(/'/g, "\\'")}']=this.checked; this.closest('.aside-pjt-item').classList.toggle('is-pjt', this.checked); runAnalysis();"><span>${p}</span></label>`).join("") || '<div style="font-size:11px; text-align:center; color:var(--sidebar-muted);">검색어 일치 현장 없음</div>';
+}
+
+function setAsidePjtAll(val) { 
+  Object.keys(G.projectSettings).forEach(k => G.projectSettings[k] = val); 
+  renderAsidePjtGrid(); 
+  runAnalysis(); 
+}
+
+function sortTable(tableId, colIdx, type) {
+  const table = document.getElementById(tableId); if (!table) return;
+  const tbody = table.querySelector("tbody"); if (!tbody) return;
+  const rows = Array.from(tbody.querySelectorAll("tr")); if (rows.length === 0 || (rows.length === 1 && rows[0].cells.length <= 1)) return;
+  if (!G.tableSortStates[tableId]) { G.tableSortStates[tableId] = { colIdx: null, dir: 'desc' }; }
+  
+  let dir = 'asc';
+  if (G.tableSortStates[tableId].colIdx === colIdx) { dir = G.tableSortStates[tableId].dir === 'asc' ? 'desc' : 'asc'; } 
+  else { dir = (type === 'num') ? 'desc' : 'asc'; }
+  
+  G.tableSortStates[tableId].colIdx = colIdx; G.tableSortStates[tableId].dir = dir;
+  table.querySelectorAll("thead th").forEach(th => th.classList.remove("sortable-asc", "sortable-desc"));
+  const thTarget = table.querySelectorAll("thead th")[colIdx]; if (thTarget) thTarget.classList.add(dir === 'asc' ? 'sortable-asc' : 'sortable-desc');
+
+  rows.sort((a, b) => {
+    const cellA = a.cells[colIdx];
+    const cellB = b.cells[colIdx];
+    
+    let valA = cellA ? cellA.getAttribute('data-val') : null;
+    let valB = cellB ? cellB.getAttribute('data-val') : null;
+    
+    if (valA === null || valB === null) {
+      valA = cellA ? cellA.innerText.trim() : "";
+      valB = cellB ? cellB.innerText.trim() : "";
+    }
+    
+    if (type === 'num') {
+      let nA = toNum(valA);
+      let nB = toNum(valB);
+      return dir === 'asc' ? nA - nB : nB - nA;
+    } else { 
+      return dir === 'asc' ? String(valA).localeCompare(String(valB), 'ko') : String(valB).localeCompare(String(valA), 'ko'); 
+    }
+  });
+  
+  const fragment = document.createDocumentFragment(); 
+  rows.forEach(r => fragment.appendChild(r)); 
+  tbody.appendChild(fragment);
+}
+
+function openGroupContractsModal(pjtName, vendorName) {
+  const group = G.filteredData.find(g => g["프로젝트명"] === pjtName && g["협력사"] === vendorName);
+  if (!group || !group.그룹계약목록) return;
+  const rows = group.그룹계약목록;
+
+  document.getElementById("modalTitle").innerHTML = `🏗️ 🤝 <strong>[${pjtName}] - ${vendorName}</strong> 상세 계약 명세`;
+  document.getElementById("modalSubtitle").textContent = `소속 프로젝트: ${pjtName} | 협력업체: ${vendorName}`;
+  document.getElementById("modalCountPill").textContent = `대상 계약: ${rows.length}건`;
+  document.getElementById("modalAmtPill").textContent = `공급가액 누계: ${Math.round(group.공급금액합계).toLocaleString()}원 (산출 초과: ${Math.round(group.초과금액).toLocaleString()}원)`;
+
+  document.getElementById("modalTableHead").innerHTML = `
+    <th>No</th>
+    <th>계약번호</th>
+    <th>변경 차수</th>
+    <th>계약명</th>
+    <th>업무구분</th>
+    <th class="num">최종 공급가액</th>
+    <th class="num">공급가액 누계</th>
+    <th>사유분류</th>
+    <th>현장 변경사유 요약</th>
+  `;
+
+  document.getElementById("modalTableBody").innerHTML = rows.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${r["계약번호"]}</td>
+      <td><strong>${r["변경차수"] ? (r["변경차수"].includes('차') ? r["변경차수"] : r["변경차수"] + '차') : '최초'}</strong></td>
+      <td title="${r["계약명"]}">${r["계약명"].length > 20 ? r["계약명"].slice(0, 20) + '…' : r["계약명"]}</td>
+      <td><span class="badge badge-normal">${r["업무구분"]}</span></td>
+      <td class="num">${Math.round(r["해당계약가액"] || r["공급금액합계"]).toLocaleString()}원</td>
+      <td class="num">${Math.round(r["공급가액누계"] || 0).toLocaleString()}원</td>
+      <td>${classifyReason(r["변경사유"])}</td>
+      <td title="${r["변경사유"]}">${r["변경사유"].length > 25 ? r["변경사유"].slice(0, 25) + '…' : r["변경사유"]}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("contractModal").classList.add("show");
+}
+
+function openPjtContractsModal(pjtName) {
+  const pjtKey = G.pjtSummaryCache.find(([name]) => name === pjtName);
+  if (!pjtKey) return;
+  const [name, val] = pjtKey;
+  
+  // 해당 프로젝트명에 속한 [현장+업체] 그룹 목록 필터링
+  const pjtGroups = G.filteredData.filter(r => r["프로젝트명"] === pjtName);
+
+  document.getElementById("modalTitle").innerHTML = `🏗️ <strong>${name}</strong> 현장 업체별 리스크 명세`;
+  document.getElementById("modalSubtitle").textContent = `소속 프로젝트: ${name}`;
+  document.getElementById("modalCountPill").textContent = `대상 업체: ${pjtGroups.length}개사`;
+  document.getElementById("modalAmtPill").textContent = `총 초과금액: ${fmtToEok(val.sum)}`;
+
+  document.getElementById("modalTableHead").innerHTML = `
+    <th>No</th>
+    <th>업체명 (협력사)</th>
+    <th class="num">계약 건수</th>
+    <th class="num">공급가액 누계</th>
+    <th class="num">기준 초과금액</th>
+    <th>대표 업무구분</th>
+    <th>대표 사유분류</th>
+  `;
+
+  document.getElementById("modalTableBody").innerHTML = pjtGroups.map((r, i) => `
+    <tr onclick="togglePjtVendorRow(this, '${r["프로젝트명"].replace(/'/g, "\\'")}', '${r["협력사"].replace(/'/g, "\\'")}')" style="cursor: pointer;">
+      <td>${i + 1}</td>
+      <td><strong>${r["협력사"]}</strong></td>
+      <td class="num">${r["계약건수"]}건</td>
+      <td class="num">${Math.round(r["공급금액합계"]).toLocaleString()}원</td>
+      <td class="num" style="color:var(--danger); font-weight:700;">${Math.round(r["초과금액"]).toLocaleString()}원</td>
+      <td><span class="badge badge-normal">${r["업무구분"]}</span></td>
+      <td>${r["사유분류"]}</td>
+    </tr>
+  `).join("") || `<tr><td colspan="7" style="text-align:center; padding:20px;">적발 내역이 없습니다.</td></tr>`;
+
+  document.getElementById("contractModal").classList.add("show");
+}
+
+function openVendorContractsModal(vendorName) {
+  const vendorKey = G.vendorSummaryCache.find(([name]) => name === vendorName);
+  if (!vendorKey) return;
+  const [name, val] = vendorKey;
+  
+  // 해당 협력사에 속한 [현장+업체] 그룹 목록 필터링
+  const vendorGroups = G.filteredData.filter(r => r["협력사"] === vendorName);
+
+  document.getElementById("modalTitle").innerHTML = `🤝 <strong>${name}</strong> 협력업체 현장별 리스크 명세`;
+  document.getElementById("modalSubtitle").textContent = `협력업체명: ${name}`;
+  document.getElementById("modalCountPill").textContent = `대상 현장: ${vendorGroups.length}개소`;
+  document.getElementById("modalAmtPill").textContent = `총 초과금액: ${fmtToEok(val.sum)}`;
+
+  document.getElementById("modalTableHead").innerHTML = `
+    <th>No</th>
+    <th>프로젝트명 (현장)</th>
+    <th class="num">계약 건수</th>
+    <th class="num">공급가액 누계</th>
+    <th class="num">기준 초과금액</th>
+    <th>대표 업무구분</th>
+    <th>대표 사유분류</th>
+  `;
+
+  document.getElementById("modalTableBody").innerHTML = vendorGroups.map((r, i) => `
+    <tr onclick="toggleVendorPjtRow(this, '${r["협력사"].replace(/'/g, "\\'")}', '${r["프로젝트명"].replace(/'/g, "\\'")}')" style="cursor: pointer;">
+      <td>${i + 1}</td>
+      <td><strong>${r["프로젝트명"]}</strong></td>
+      <td class="num">${r["계약건수"]}건</td>
+      <td class="num">${Math.round(r["공급금액합계"]).toLocaleString()}원</td>
+      <td class="num" style="color:var(--danger); font-weight:700;">${Math.round(r["초과금액"]).toLocaleString()}원</td>
+      <td><span class="badge badge-normal">${r["업무구분"]}</span></td>
+      <td>${r["사유분류"]}</td>
+    </tr>
+  `).join("") || `<tr><td colspan="7" style="text-align:center; padding:20px;">적발 내역이 없습니다.</td></tr>`;
+
+  document.getElementById("contractModal").classList.add("show");
+}
+
+function openJobContractsModal(jobName) {
+  const jobKey = G.jobSummaryCache.find(([name]) => name === jobName);
+  if (!jobKey) return;
+  const [name, val] = jobKey;
+  const originalRows = val.rows.flatMap(r => r.그룹계약목록 || [r]);
+
+  document.getElementById("modalTitle").innerHTML = `📂 <strong>${name}</strong> 업무 파트 계약 상세 명세`;
+  document.getElementById("modalSubtitle").textContent = `업무분류: ${name}`;
+  document.getElementById("modalCountPill").textContent = `대상 계약: ${originalRows.length}건`;
+  document.getElementById("modalAmtPill").textContent = `총 초과금액: ${fmtToEok(val.sum)}`;
+
+  document.getElementById("modalTableHead").innerHTML = `
+    <th>No</th>
+    <th>계약번호</th>
+    <th>협력사</th>
+    <th>프로젝트명</th>
+    <th>계약명</th>
+    <th class="num">계약금액</th>
+    <th class="num">누계 계약금액</th>
+    <th>사유분류</th>
+    <th>변경사유 요약</th>
+  `;
+
+  document.getElementById("modalTableBody").innerHTML = originalRows.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${r["계약번호"]}</td>
+      <td><strong>${r["협력사"]}</strong></td>
+      <td>${r["프로젝트명"]}</td>
+      <td title="${r["계약명"]}">${r["계약명"].length > 20 ? r["계약명"].slice(0, 20) + '…' : r["계약명"]}</td>
+      <td class="num">${Math.round(r["해당계약가액"] || r["공급금액합계"]).toLocaleString()}원</td>
+      <td class="num">${Math.round(r["공급가액누계"] || 0).toLocaleString()}원</td>
+      <td>${classifyReason(r["변경사유"])}</td>
+      <td title="${r["변경사유"]}">${r["변경사유"].length > 25 ? r["변경사유"].slice(0, 25) + '…' : r["변경사유"]}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("contractModal").classList.add("show");
+}
+
+function openWorkContractsModal(reasonName) {
+  const reasonKey = G.workSummaryCache.find(([name]) => name === reasonName);
+  if (!reasonKey) return;
+  const [name, val] = reasonKey;
+  const originalRows = val.rows.flatMap(r => r.그룹계약목록 || [r]);
+
+  document.getElementById("modalTitle").innerHTML = `🔧 <strong>${name}</strong> 초과 사유 계약 상세 명세`;
+  document.getElementById("modalSubtitle").textContent = `초과 사유 분류: ${name}`;
+  document.getElementById("modalCountPill").textContent = `대상 계약: ${originalRows.length}건`;
+  document.getElementById("modalAmtPill").textContent = `총 초과금액: ${fmtToEok(val.sum)}`;
+
+  document.getElementById("modalTableHead").innerHTML = `
+    <th>No</th>
+    <th>계약번호</th>
+    <th>협력사</th>
+    <th>프로젝트명</th>
+    <th>계약명</th>
+    <th>업무구분</th>
+    <th class="num">계약금액</th>
+    <th class="num">누계 계약금액</th>
+    <th>변경사유 요약</th>
+  `;
+
+  document.getElementById("modalTableBody").innerHTML = originalRows.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${r["계약번호"]}</td>
+      <td><strong>${r["협력사"]}</strong></td>
+      <td>${r["프로젝트명"]}</td>
+      <td title="${r["계약명"]}">${r["계약명"].length > 20 ? r["계약명"].slice(0, 20) + '…' : r["계약명"]}</td>
+      <td><span class="badge badge-normal">${r["업무구분"]}</span></td>
+      <td class="num">${Math.round(r["해당계약가액"] || r["공급금액합계"]).toLocaleString()}원</td>
+      <td class="num">${Math.round(r["공급가액누계"] || 0).toLocaleString()}원</td>
+      <td title="${r["변경사유"]}">${r["변경사유"].length > 25 ? r["변경사유"].slice(0, 25) + '…' : r["변경사유"]}</td>
+    </tr>
+  `).join("");
+
+  document.getElementById("contractModal").classList.add("show");
+}
+
+function closeContractModalDirect() {
+  document.getElementById("contractModal").classList.remove("show");
+}
+
+function closeContractModal(event) {
+  if (event.target.id === "contractModal") {
+    closeContractModalDirect();
+  }
+}
+
+function togglePjtVendorRow(tr, pjtName, vendorName) {
+  const nextRow = tr.nextElementSibling;
+  if (nextRow && nextRow.classList.contains("pjt-vendor-detail-row")) {
+    nextRow.remove();
+    tr.classList.remove("expanded-row");
+    return;
+  }
+  
+  const group = G.filteredData.find(g => g["프로젝트명"] === pjtName && g["협력사"] === vendorName);
+  if (!group || !group.그룹계약목록) return;
+  const rows = group.그룹계약목록;
+
+  let detailHtml = `
+    <tr class="pjt-vendor-detail-row">
+      <td colspan="7" style="padding: 12px 20px; border-bottom: 1px solid var(--border);">
+        <div class="pjt-vendor-detail-panel">
+          <div style="font-weight: 700; margin-bottom: 10px; color: var(--primary); display:flex; justify-content:space-between; font-size:12.5px;">
+            <span>📋 [${vendorName}] 개별 계약 상세 내역</span>
+            <span style="color:var(--muted)">총 ${rows.length}건의 원본 계약 내역이 수록되어 있습니다.</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="modal-table" style="width:100%; border: 1px solid var(--border); font-size:12px;">
+              <thead>
+                <tr style="background-color: #f8fafc; font-weight:700;">
+                  <th style="padding:6px 10px;">No</th>
+                  <th style="padding:6px 10px;">계약번호</th>
+                  <th style="padding:6px 10px;">변경차수</th>
+                  <th style="padding:6px 10px;">프로젝트명</th>
+                  <th style="padding:6px 10px;">계약명</th>
+                  <th style="padding:6px 10px;">업무구분</th>
+                  <th style="padding:6px 10px;" class="num">계약금액</th>
+                  <th style="padding:6px 10px;" class="num">누계 계약금액</th>
+                  <th style="padding:6px 10px;">사유분류</th>
+                  <th style="padding:6px 10px;">변경사유 요약</th>
+                </tr>
+              </thead>
+              <tbody>
+  `;
+
+  detailHtml += rows.map((r, i) => `
+                <tr style="background-color: #ffffff;">
+                  <td style="padding:6px 10px;">${i + 1}</td>
+                  <td style="padding:6px 10px;">${r["계약번호"]}</td>
+                  <td style="padding:6px 10px;"><strong>${r["변경차수"] ? (r["변경차수"].includes('차') ? r["변경차수"] : r["변경차수"] + '차') : '최초'}</strong></td>
+                  <td style="padding:6px 10px;">${r["프로젝트명"]}</td>
+                  <td style="padding:6px 10px;" title="${r["계약명"]}">${r["계약명"].length > 15 ? r["계약명"].slice(0, 15) + '…' : r["계약명"]}</td>
+                  <td style="padding:6px 10px;"><span class="badge badge-normal" style="font-size:10px; padding:2px 6px;">${r["업무구분"]}</span></td>
+                  <td style="padding:6px 10px;" class="num">${Math.round(r["해당계약가액"] || r["공급금액합계"]).toLocaleString()}원</td>
+                  <td style="padding:6px 10px;" class="num">${Math.round(r["공급가액누계"] || 0).toLocaleString()}원</td>
+                  <td style="padding:6px 10px;">${classifyReason(r["변경사유"])}</td>
+                  <td style="padding:6px 10px;" title="${r["변경사유"]}">${r["변경사유"].length > 20 ? r["변경사유"].slice(0, 20) + '…' : r["변경사유"]}</td>
+                </tr>
+  `).join("");
+
+  detailHtml += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </td>
+    </tr>
+  `;
+
+  tr.insertAdjacentHTML('afterend', detailHtml);
+  tr.classList.add("expanded-row");
+}
+
+function toggleVendorPjtRow(tr, vendorName, pjtName) {
+  const nextRow = tr.nextElementSibling;
+  if (nextRow && nextRow.classList.contains("pjt-vendor-detail-row")) {
+    nextRow.remove();
+    tr.classList.remove("expanded-row");
+    return;
+  }
+  
+  const group = G.filteredData.find(g => g["프로젝트명"] === pjtName && g["협력사"] === vendorName);
+  if (!group || !group.그룹계약목록) return;
+  const rows = group.그룹계약목록;
+
+  let detailHtml = `
+    <tr class="pjt-vendor-detail-row">
+      <td colspan="7" style="padding: 12px 20px; border-bottom: 1px solid var(--border);">
+        <div class="pjt-vendor-detail-panel">
+          <div style="font-weight: 700; margin-bottom: 10px; color: var(--primary); display:flex; justify-content:space-between; font-size:12.5px;">
+            <span>📋 [${pjtName}] 개별 계약 상세 내역</span>
+            <span style="color:var(--muted)">총 ${rows.length}건의 원본 계약 내역이 수록되어 있습니다.</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="modal-table" style="width:100%; border: 1px solid var(--border); font-size:12px;">
+              <thead>
+                <tr style="background-color: #f8fafc; font-weight:700;">
+                  <th style="padding:6px 10px;">No</th>
+                  <th style="padding:6px 10px;">계약번호</th>
+                  <th style="padding:6px 10px;">변경차수</th>
+                  <th style="padding:6px 10px;">프로젝트명</th>
+                  <th style="padding:6px 10px;">계약명</th>
+                  <th style="padding:6px 10px;">업무구분</th>
+                  <th style="padding:6px 10px;" class="num">계약금액</th>
+                  <th style="padding:6px 10px;" class="num">누계 계약금액</th>
+                  <th style="padding:6px 10px;">사유분류</th>
+                  <th style="padding:6px 10px;">변경사유 요약</th>
+                </tr>
+              </thead>
+              <tbody>
+  `;
+
+  detailHtml += rows.map((r, i) => `
+                <tr style="background-color: #ffffff;">
+                  <td style="padding:6px 10px;">${i + 1}</td>
+                  <td style="padding:6px 10px;">${r["계약번호"]}</td>
+                  <td style="padding:6px 10px;"><strong>${r["변경차수"] ? (r["변경차수"].includes('차') ? r["변경차수"] : r["변경차수"] + '차') : '최초'}</strong></td>
+                  <td style="padding:6px 10px;">${r["프로젝트명"]}</td>
+                  <td style="padding:6px 10px;" title="${r["계약명"]}">${r["계약명"].length > 15 ? r["계약명"].slice(0, 15) + '…' : r["계약명"]}</td>
+                  <td style="padding:6px 10px;"><span class="badge badge-normal" style="font-size:10px; padding:2px 6px;">${r["업무구분"]}</span></td>
+                  <td style="padding:6px 10px;" class="num">${Math.round(r["해당계약가액"] || r["공급금액합계"]).toLocaleString()}원</td>
+                  <td style="padding:6px 10px;" class="num">${Math.round(r["공급가액누계"] || 0).toLocaleString()}원</td>
+                  <td style="padding:6px 10px;">${classifyReason(r["변경사유"])}</td>
+                  <td style="padding:6px 10px;" title="${r["변경사유"]}">${r["변경사유"].length > 20 ? r["변경사유"].slice(0, 20) + '…' : r["변경사유"]}</td>
+                </tr>
+  `).join("");
+
+  detailHtml += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </td>
+    </tr>
+  `;
+
+  tr.insertAdjacentHTML('afterend', detailHtml);
+  tr.classList.add("expanded-row");
+}
+
+function renderSuspectTable(dataList) { sortAndRenderSuspect(dataList); }
+
+function sortAndRenderSuspect(dataList) {
+  const key = G.suspectSort.key; const dir = G.suspectSort.dir; const arr = [...dataList];
+  if (key) {
+    arr.sort((a,b) => {
+      let av = a[key], bv = b[key];
+      if (key === "해당계약가액" || key === "공급가액누계") { av = toNum(av); bv = toNum(bv); }
+      else av = String(av ?? ""), bv = String(bv ?? "");
+      if (av < bv) return dir === "asc" ? -1 : 1; if (av > bv) return dir === "asc" ? 1 : -1; return 0;
+    });
+  }
+  document.getElementById("suspectCount").textContent = `감지 건수: ${arr.length}건`;
+  document.getElementById("suspectTbody").innerHTML = arr.map((r, i) => `<tr><td>${i+1}</td><td style="font-weight:700; color:var(--danger);" data-val="${r["의심유형"]}">${r["의심유형"]}</td><td data-val="${r["계약번호"]}">${r["계약번호"]}</td><td data-val="${r["협력사"]}"><strong>${r["협력사"]}</strong></td><td data-val="${r["프로젝트명"]}">${r["프로젝트명"]}</td><td title="${r["계약명"]}" data-val="${r["계약명"]}">${r["계약명"].length>15?r["계약명"].slice(0,15)+'…':r["계약명"]}</td><td class="num" data-val="${r["해당계약가액"]}">${Math.round(r["해당계약가액"]).toLocaleString()}원</td><td data-val="${r["변경차수"]}">${r["변경차수"] ? (r["변경차수"].includes('차') ? r["변경차수"] : r["변경차수"]+'차') : '최초'}</td><td style="font-size:12px; color:var(--muted); line-height:1.4;" title="${r["상세사유"]}">${r["상세사유"]}</td></tr>`).join("") || `<tr><td colspan="9" style="text-align:center; padding:40px; color:var(--muted);">의심 거래 거래가 감지되지 않았습니다.</td></tr>`;
+}
+
+function bindSuspectSortHandlers() {
+  document.querySelectorAll("#suspectTable thead th[data-key]").forEach(th => {
+    th.onclick = () => {
+      const k = th.getAttribute("data-key");
+      if (G.suspectSort.key === k) G.suspectSort.dir = G.suspectSort.dir === "asc" ? "desc" : "asc";
+      else { G.suspectSort.key = k; G.suspectSort.dir = "asc"; }
+      document.querySelectorAll("#suspectTable thead th[data-key]").forEach(x => x.classList.remove("sortable-asc","sortable-desc"));
+      th.classList.add(G.suspectSort.dir === "asc" ? "sortable-asc" : "sortable-desc");
+      applySuspectFilter();
+    };
+  });
+}
+
+function populateSuspectFilters() {
+  const jobSel = document.getElementById("fSuspectJobType");
+  if (!jobSel) return;
+  const prevJob = jobSel.value;
+  const jobs = [...new Set(G.suspectData.map(r=>r["업무구분"]).filter(Boolean))].sort();
+  jobSel.innerHTML = `<option value="">전체보기</option>` + jobs.map(j=>`<option>${j}</option>`).join("");
+  if (jobs.includes(prevJob)) jobSel.value = prevJob;
+}
+
+function applySuspectFilter() {
+  const type = document.getElementById("fSuspectType").value;
+  const job = document.getElementById("fSuspectJobType").value;
+  const kw = document.getElementById("fSuspectSearchKeyword") ? document.getElementById("fSuspectSearchKeyword").value.toLowerCase().trim() : "";
+
+  const target = G.suspectData.filter(r => {
+    const matchType = !type || r["의심유형"] === type;
+    const matchJob = !job || r["업무구분"] === job;
+    let matchKeyword = true;
+    if (kw) {
+      const terms = kw.split(/\s+/).filter(Boolean);
+      const targetText = `${r["계약번호"]} ${r["계약명"]} ${r["협력사"]} ${r["프로젝트명"]} ${r["변경사유"]} ${r["의심유형"]} ${r["상세사유"]}`.toLowerCase();
+      matchKeyword = terms.every(term => targetText.includes(term));
+    }
+    return matchType && matchJob && matchKeyword;
+  });
+
+  sortAndRenderSuspect(target);
+}
+
+function resetSuspectFilter() {
+  document.getElementById("fSuspectType").value = "";
+  document.getElementById("fSuspectJobType").value = "";
+  if (document.getElementById("fSuspectSearchKeyword")) {
+    document.getElementById("fSuspectSearchKeyword").value = "";
+  }
+  sortAndRenderSuspect(G.suspectData);
+}
+
+function exportSuspectToExcel() {
+  if (!G.suspectData.length) { alert("내보낼 데이터가 없습니다."); return; }
+  const type = document.getElementById("fSuspectType").value;
+  const job = document.getElementById("fSuspectJobType").value;
+  const kw = document.getElementById("fSuspectSearchKeyword") ? document.getElementById("fSuspectSearchKeyword").value.toLowerCase().trim() : "";
+
+  const target = G.suspectData.filter(r => {
+    const matchType = !type || r["의심유형"] === type;
+    const matchJob = !job || r["업무구분"] === job;
+    let matchKeyword = true;
+    if (kw) {
+      const terms = kw.split(/\s+/).filter(Boolean);
+      const targetText = `${r["계약번호"]} ${r["계약명"]} ${r["협력사"]} ${r["프로젝트명"]} ${r["변경사유"]} ${r["의심유형"]} ${r["상세사유"]}`.toLowerCase();
+      matchKeyword = terms.every(term => targetText.includes(term));
+    }
+    return matchType && matchJob && matchKeyword;
+  });
+
+  if (!target.length) { alert("현재 필터링된 조건에 부합하는 의심 내역이 없습니다."); return; }
+
+  const exportData = target.map((r, i) => ({
+    "No": i + 1,
+    "의심 유형": r["의심유형"],
+    "계약번호": r["계약번호"],
+    "협력사": r["협력사"],
+    "소속 프로젝트명": r["프로젝트명"],
+    "계약명": r["계약명"],
+    "계약금액(원)": Math.round(r["해당계약가액"]),
+    "변경 차수": r["변경차수"] || "최초",
+    "시스템 정밀 분석 리스크 소견": r["상세사유"]
+  }));
+  
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  worksheet['!cols'] = [
+    {wch: 5},   // No
+    {wch: 18},  // 의심 유형
+    {wch: 16},  // 계약번호
+    {wch: 26},  // 협력사
+    {wch: 26},  // 소속 프로젝트명
+    {wch: 36},  // 계약명
+    {wch: 18},  // 계약금액
+    {wch: 12},  // 변경차수
+    {wch: 80}   // 리스크 소견
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "우회 의심 거래 명세");
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  XLSX.writeFile(workbook, `소액수의계약_우회_의심_명세_${dateStr}.xlsx`);
+  showToast("📊 필터링 결과 엑셀 리포트 출력 완료!");
+}
+
+function downloadThisApp() {
+  const html = "<!DOCTYPE html>\n<html>\n" + document.documentElement.outerHTML + "\n</html>";
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8;" })); a.download = "소액수의계약_초과_통제_시스템.html"; a.click();
+}
+
+function showToast(m) { 
+  const t = document.getElementById("toast"); 
+  t.textContent = m; 
+  t.classList.add("show"); 
+  setTimeout(() => t.classList.remove("show"), 2500); 
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  bindDetailSortHandlers();
+  bindSuspectSortHandlers();
+  setTimeout(() => document.getElementById("toast").classList.remove("show"), 2500);
+});
+</script>
+
+</body>
+</html>
