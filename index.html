@@ -245,7 +245,7 @@
       gap: 12px;
     }
 
-    .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
     
     .kpi-card { 
       background: var(--card); 
@@ -273,12 +273,16 @@
     }
     
     .kpi-card.red-indicator::before { background: var(--danger); }
+    .kpi-card.green-indicator::before { background: var(--success); }
+    .kpi-card.warning-indicator::before { background: var(--warning); }
     
     .kpi-card .label { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
     
     .kpi-card .value { font-size: 22px; font-weight: 800; margin-top: 6px; color: var(--text); font-family: "Outfit", sans-serif; }
     
     .kpi-card .value.red { color: var(--danger); }
+    .kpi-card .value.green { color: var(--success); }
+    .kpi-card .value.warning { color: var(--warning); }
     
     .kpi-card .sub { font-size: 11.5px; color: var(--muted); margin-top: 4px; font-weight: 500; }
 
@@ -1285,7 +1289,8 @@ const G = {
   jobSummaryCache: [], workSummaryCache: [],
   detailSort: { key: '협력사', dir: 'asc' }, suspectSort: { key: '협력사', dir: 'asc' }, compareData: null,
   tableSortStates: {},
-  minTimelineDate: null, maxTimelineDate: null
+  minTimelineDate: null, maxTimelineDate: null,
+  flagSingleKeys: [], flagSplitKeys: []
 };
 
 const REASON_MAP = {
@@ -1443,6 +1448,23 @@ function processExcelFile(file) {
       const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
       if (!json.length) { alert("파싱할 로우 데이터가 발견되지 않았습니다."); return; }
 
+      // Detect flag columns from the headers or subheader row (json[0])
+      G.flagSingleKeys = [];
+      G.flagSplitKeys = [];
+      if (json.length > 0) {
+        const firstRow = json[0];
+        const keys = Object.keys(firstRow);
+        keys.forEach(k => {
+          const val = String(firstRow[k] || "");
+          if (k.includes("단일계약") || k.includes("금액초과") || val.includes("단일계약") || val.includes("금액초과")) {
+            G.flagSingleKeys.push(k);
+          }
+          if (k.includes("소액분할") || k.includes("PJT") || val.includes("소액분할") || val.includes("PJT")) {
+            G.flagSplitKeys.push(k);
+          }
+        });
+      }
+
       G.rawData = json.map(row => normalizeRow(row)).filter(Boolean);
       if (!G.rawData.length) {
         alert("유효한 계약 데이터가 없습니다. 필수 컬럼명(계약번호, 협력사, 계약금액 등)을 확인하세요.");
@@ -1522,8 +1544,16 @@ function checkExcess(row, limits) {
   const reason = row["변경사유"]; 
   const isProject = G.projectSettings[pjt] === true; 
   const total = row["공급금액합계"];
-  const flagSingle = Object.keys(row).some(k => (k.includes("단일계약") || k.includes("금액초과")) && String(row[k]).includes("●"));
-  const flagSplit = Object.keys(row).some(k => (k.includes("소액분할") || k.includes("PJT")) && String(row[k]).includes("●"));
+  
+  let flagSingle = G.flagSingleKeys.some(k => String(row[k] || "").includes("●"));
+  let flagSplit = G.flagSplitKeys.some(k => String(row[k] || "").includes("●"));
+  
+  if (!G.flagSingleKeys.length) {
+    flagSingle = Object.keys(row).some(k => (k.includes("단일계약") || k.includes("금액초과")) && String(row[k]).includes("●"));
+  }
+  if (!G.flagSplitKeys.length) {
+    flagSplit = Object.keys(row).some(k => (k.includes("소액분할") || k.includes("PJT")) && String(row[k]).includes("●"));
+  }
 
   let isExcess = false, excessAmt = 0;
   
@@ -1665,9 +1695,31 @@ function renderDashboard() {
   const normalContractsCount = totalLoadedCount - excessContractsCount;
 
   document.getElementById("kpiRow").innerHTML = `
-    <div class="kpi-card"><div class="label">📋 총 로드 데이터</div><div class="value">${totalLoadedCount.toLocaleString()}건</div><div class="sub">날짜 필터링 적용 전체 모니터링 대상</div></div>
-    <div class="kpi-card red-indicator"><div class="label">⚠️ 한도 초과 분석 그룹</div><div class="value red">${G.filteredData.length.toLocaleString()}개 조합</div><div class="sub">동일 프로젝트 & 동일 협력사 간 합산 계약 분석 조합</div></div>
-    <div class="kpi-card red-indicator"><div class="label">💰 총 한도 초과 금액</div><div class="value red">${fmtToEok(totAmt)}</div><div class="sub">리스크 노출 총액</div></div>`;
+    <div class="kpi-card">
+      <div class="label">📋 총 로드 데이터</div>
+      <div class="value">${totalLoadedCount.toLocaleString()}건</div>
+      <div class="sub">날짜 필터링 적용 전체 대상</div>
+    </div>
+    <div class="kpi-card green-indicator">
+      <div class="label">✅ 정상 계약 건수</div>
+      <div class="value green">${normalContractsCount.toLocaleString()}건</div>
+      <div class="sub">한도 내 정상 거래 건수</div>
+    </div>
+    <div class="kpi-card red-indicator">
+      <div class="label">🚨 이상치 계약 건수</div>
+      <div class="value red">${excessContractsCount.toLocaleString()}건</div>
+      <div class="sub">한도 초과 거래 건수</div>
+    </div>
+    <div class="kpi-card warning-indicator">
+      <div class="label">⚠️ 분석 대상 그룹</div>
+      <div class="value warning">${G.filteredData.length.toLocaleString()}개 조합</div>
+      <div class="sub">동일 프로젝트 & 협력사 기준</div>
+    </div>
+    <div class="kpi-card red-indicator">
+      <div class="label">💰 총 한도 초과 금액</div>
+      <div class="value red">${fmtToEok(totAmt)}</div>
+      <div class="sub">리스크 노출 총액</div>
+    </div>`;
   renderCharts();
 }
 
