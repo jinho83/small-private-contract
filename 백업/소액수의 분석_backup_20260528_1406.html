@@ -899,6 +899,7 @@
         <button class="tab-btn" onclick="switchTab('tab-summary',this)">📈 다차원 업무 요약</button>
         <button class="tab-btn" onclick="switchTab('tab-compare',this)">📅 기간 전후 비교</button>
         <button class="tab-btn" onclick="switchTab('tab-detail',this)">📋 초과 모니터링 상세</button>
+        <button class="tab-btn" id="btn-tab-suspect" onclick="switchTab('tab-suspect',this)">🔎 쪼개기/증액 의심 분석</button>
       </div>
 
       <!-- 종합 대시보드 탭 -->
@@ -1238,6 +1239,60 @@
           </div>
         </div>
       </div>
+
+      <!-- 쪼개기/증액 의심 분석 탭 -->
+      <div id="tab-suspect" class="tab-content">
+        <div class="filter-bar">
+          <div style="flex: 1; min-width: 260px;">
+            <label>🔍 의심 계약 검색</label>
+            <input type="text" id="fSuspectSearchKeyword" placeholder="예: 현대 안전 자재..." oninput="applySuspectFilter()" style="width: 100%;">
+          </div>
+          <div>
+            <label>의심유형</label>
+            <select id="fSuspectType" onchange="applySuspectFilter()">
+              <option value="">전체보기</option>
+              <option value="쪼개기 발주 의심">쪼개기 발주 의심</option>
+              <option value="한도 임박 회피 의심">한도 임박 회피 의심</option>
+              <option value="다차수 증액 의심">다차수 증액 의심</option>
+            </select>
+          </div>
+          <div>
+            <label>업무구분</label>
+            <select id="fSuspectJobType" onchange="applySuspectFilter()">
+              <option value="">전체보기</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-header-action" onclick="exportSuspectToExcel()" style="background: linear-gradient(135deg, var(--danger), #dc2626); color:#fff; border:none; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2); font-weight: 700;">📊 의심명세 내보내기</button>
+            <button class="btn-header-action btn-header-reset" onclick="resetSuspectFilter()" style="font-weight: 700;">필터 초기화</button>
+          </div>
+        </div>
+        
+        <div class="card" style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <span class="section-title" style="font-weight:800; font-size: 13.5px; color: var(--danger);">⚠️ 쪼개기 계약 및 한도 우회 의심 거래 분석 리포트</span>
+            <span id="suspectCount" style="font-size:12.5px; color:var(--danger); font-weight: 600;">감지 건수: 0건</span>
+          </div>
+          <div class="scrollable-table-wrap">
+            <table id="suspectTable">
+              <thead>
+                <tr>
+                  <th class="no-sort" style="width: 50px;">No</th>
+                  <th data-key="의심유형" style="color: var(--danger);">의심유형</th>
+                  <th data-key="계약번호">계약번호</th>
+                  <th data-key="협력사" class="sortable-asc">협력사</th>
+                  <th data-key="프로젝트명">프로젝트명</th>
+                  <th data-key="계약명">계약명</th>
+                  <th data-key="해당계약가액" class="num">계약금액</th>
+                  <th data-key="변경차수">변경차수</th>
+                  <th>💡 리스크 소견</th>
+                </tr>
+              </thead>
+              <tbody id="suspectTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1301,10 +1356,7 @@ const REASON_MAP = {
 const COLORS = ["#4f46e5","#ef4444","#f97316","#10b981","#8b5cf6","#06b6d4","#eab308","#854d0e","#475569","#0d9488"];
 
 function toNum(v) { 
-  if (typeof v === "number") return isNaN(v) ? 0 : v;
-  if (!v) return 0;
-  const num = Number(v);
-  if (!isNaN(num)) return num;
+  if (typeof v === "number") return v; 
   if (typeof v === "string") return parseFloat(v.replace(/[^0-9.\-]/g, "")) || 0; 
   return 0; 
 }
@@ -1316,29 +1368,11 @@ function parseDate(v) {
   if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
   if (typeof v === "number") return new Date((v - 25569) * 86400 * 1000);
   const str = String(v).trim();
-  const m = str.match(/^(\d{4}|\d{2})[.\-\/\s]+(\d{1,2})[.\-\/\s]+(\d{1,2})/);
-  if (m) {
-    let y = parseInt(m[1]);
-    if (y < 100) y += 2000;
-    return new Date(y, parseInt(m[2]) - 1, parseInt(m[3]));
-  }
+  const m = str.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
   const m2 = str.match(/^(\d{4})(\d{2})(\d{2})$/);
   if (m2) return new Date(parseInt(m2[1]), parseInt(m2[2]) - 1, parseInt(m2[3]));
   return null;
-}
-
-function escapeHtml(str) {
-  if (str === null || str === undefined) return "";
-  return String(str).replace(/[&<>"']/g, function(m) {
-    switch (m) {
-      case '&': return '&amp;';
-      case '<': return '&lt;';
-      case '>': return '&gt;';
-      case '"': return '&quot;';
-      case "'": return '&#039;';
-      default: return m;
-    }
-  });
 }
 
 function getLimits() {
@@ -1419,12 +1453,6 @@ function normalizeRow(row) {
   row["혼합골재금액"] = toNum(findFuzzyVal(row, ["혼합골재금액", "혼합골재"]));
   let changeDegree = String(findFuzzyVal(row, ["변경차수", "차수", "변경번호", "차수구분"]) || "").trim();
   row["변경차수"] = changeDegree;
-
-  let pumiDateVal = findFuzzyVal(row, ["품의일자", "품의일", "결재일자", "결재일"]);
-  let contractDateVal = findFuzzyVal(row, ["계약일자", "계약일", "계약(변경)일", "변경일", "계약(변경)일자"]);
-  row["품의일자"] = pumiDateVal !== undefined ? pumiDateVal : "";
-  row["계약(변경)일"] = contractDateVal !== undefined ? contractDateVal : "";
-
   return row;
 }
 
@@ -1444,11 +1472,6 @@ function processExcelFile(file) {
       if (!json.length) { alert("파싱할 로우 데이터가 발견되지 않았습니다."); return; }
 
       G.rawData = json.map(row => normalizeRow(row)).filter(Boolean);
-      if (!G.rawData.length) {
-        alert("유효한 계약 데이터가 없습니다. 필수 컬럼명(계약번호, 협력사, 계약금액 등)을 확인하세요.");
-        resetAllData();
-        return;
-      }
       document.getElementById("emptyGuideCard").classList.add("hidden");
       document.getElementById("lastUpdated").textContent = `구매부서 | 정상 로드 완료 (${G.rawData.length}건)`;
 
@@ -1565,8 +1588,7 @@ function runAnalysis() {
   // 1. 날짜 필터링을 거친 유효 원본 계약만 추출
   G.validRawRows = G.rawData.filter(row => {
     const rDate = parseDate(row["품의일자"]) || parseDate(row["계약(변경)일"]);
-    if (start || end) {
-      if (!rDate) return false;
+    if (rDate) {
       if (start && rDate < start) return false;
       if (end && rDate > end) return false;
     }
@@ -1626,6 +1648,112 @@ function runAnalysis() {
   
   G.filteredData = G.excessData.filter(r => r["초과금액"] > 0 || r["예외처리"] !== "정상");
   
+  // 쪼개기 발주 및 한도 우회 의심 거래 탐지 알고리즘 실행
+  G.suspectData = [];
+  Object.values(groups).forEach(group => {
+    const pjt = group.pjt;
+    const vendor = group.vendor;
+    const rows = group.rows;
+
+    // 1. 단기간 다회 계약 (쪼개기 발주 의심)
+    if (rows.length >= 2) {
+      const sortedRows = [...rows].sort((a, b) => {
+        const da = parseDate(a["품의일자"]) || parseDate(a["계약(변경)일"]) || new Date(0);
+        const db = parseDate(b["품의일자"]) || parseDate(b["계약(변경)일"]) || new Date(0);
+        return da - db;
+      });
+
+      for (let i = 0; i < sortedRows.length - 1; i++) {
+        const r1 = sortedRows[i];
+        const r2 = sortedRows[i+1];
+        const d1 = parseDate(r1["품의일자"]) || parseDate(r1["계약(변경)일"]);
+        const d2 = parseDate(r2["품의일자"]) || parseDate(r2["계약(변경)일"]);
+
+        if (d1 && d2) {
+          const diffDays = Math.abs(d2 - d1) / (1000 * 60 * 60 * 24);
+          if (diffDays <= 15) {
+            const job = String(r1["업무구분"] || "").trim();
+            const isProject = G.projectSettings[pjt] === true;
+            let limit = limits.mat_normal;
+            if (job.includes("설비")) limit = limits.equip;
+            else if (job.includes("자재")) limit = isProject ? limits.mat_project : limits.mat_normal;
+            else if (job.includes("공사") || job.includes("용역")) limit = isProject ? limits.work_project : limits.work_normal;
+
+            const a1 = r1["해당계약가액"] || 0;
+            const a2 = r2["해당계약가액"] || 0;
+
+            if (a1 <= limit && a2 <= limit && (a1 + a2) > limit) {
+              const r1_num = Math.round(a1).toLocaleString();
+              const r2_num = Math.round(a2).toLocaleString();
+              const lim_num = Math.round(limit).toLocaleString();
+              const tot_num = Math.round(a1+a2).toLocaleString();
+              const reasonDetail = `[간격: ${Math.round(diffDays)}일] 동일 현장/협력사 간 15일 이내 연속 계약 체결. 개별 금액(${r1_num}원 / ${r2_num}원)은 한도 이하이나, 합산 누계(${tot_num}원)가 한도 규정(${lim_num}원)을 초과함. (분할발주 우회 정황)`;
+              
+              G.suspectData.push({ ...r1, "의심유형": "쪼개기 발주 의심", "상세사유": reasonDetail });
+              G.suspectData.push({ ...r2, "의심유형": "쪼개기 발주 의심", "상세사유": reasonDetail });
+            }
+          }
+        }
+      }
+    }
+
+    // 2. 한도 임박 회피성 계약 (Limit Skirting) 의심
+    rows.forEach(r => {
+      const job = String(r["업무구분"] || "").trim();
+      const isProject = G.projectSettings[pjt] === true;
+      let limit = limits.mat_normal;
+      if (job.includes("설비")) limit = limits.equip;
+      else if (job.includes("자재")) limit = isProject ? limits.mat_project : limits.mat_normal;
+      else if (job.includes("공사") || job.includes("용역")) limit = isProject ? limits.work_project : limits.work_normal;
+
+      const amt = r["공급가액누계"] || r["해당계약가액"] || 0;
+      if (amt >= (limit * 0.9) && amt < limit) {
+        if (!G.suspectData.some(s => s["계약번호"] === r["계약번호"])) {
+          const amt_num = Math.round(amt).toLocaleString();
+          const lim_num = Math.round(limit).toLocaleString();
+          G.suspectData.push({
+            ...r,
+            "의심유형": "한도 임박 회피 의심",
+            "상세사유": `최종 계약 누계액(${amt_num}원)이 규정한도(${lim_num}원)의 90% 이상에 근접하여 한도 초과 심사를 회피하기 위한 금액 셋팅 정황이 관측됨.`
+          });
+        }
+      }
+    });
+
+    // 3. 비정상 다차수 증액 (Excessive Revision) 의심
+    rows.forEach(r => {
+      const chg = String(r["변경차수"] || "").trim();
+      const chgNum = parseInt(chg.replace(/[^0-9]/g, "")) || 0;
+      if (chgNum >= 3) {
+        const amt = r["해당계약가액"] || 0;
+        const nuge = r["공급가액누계"] || 0;
+        const otherAmt = nuge - amt;
+        if (otherAmt > 0 && (nuge / otherAmt) >= 1.5) {
+          if (!G.suspectData.some(s => s["계약번호"] === r["계약번호"])) {
+            const nuge_num = Math.round(nuge).toLocaleString();
+            G.suspectData.push({
+              ...r,
+              "의심유형": "다차수 증액 의심",
+              "상세사유": `계약 변경 차수가 ${chgNum}차에 달하고 누적 금액(${nuge_num}원)이 급증함. 한 번에 계약하지 않고 여러 차례 변경 계약을 통해 금액을 임의 증액시키는 우회 정황이 감지됨.`
+            });
+          }
+        }
+      }
+    });
+  });
+
+  // 중복 탐지 제거
+  const uniqueSuspects = [];
+  const suspectKeys = new Set();
+  G.suspectData.forEach(s => {
+    const key = `${s["계약번호"]}||${s["의심유형"]}`;
+    if (!suspectKeys.has(key)) {
+      suspectKeys.add(key);
+      uniqueSuspects.push(s);
+    }
+  });
+  G.suspectData = uniqueSuspects;
+
   G.tableSortStates = {};
   document.querySelectorAll("thead th").forEach(th => th.classList.remove("sortable-asc", "sortable-desc"));
 
@@ -1636,6 +1764,9 @@ function runAnalysis() {
   renderDashboard();
   renderDetailTable(G.filteredData);
   populateFilters();
+  
+  renderSuspectTable(G.suspectData);
+  populateSuspectFilters();
 
   document.getElementById("dashboardSection").classList.remove("hidden");
   updateAlertBanner();
@@ -1667,7 +1798,8 @@ function renderDashboard() {
   document.getElementById("kpiRow").innerHTML = `
     <div class="kpi-card"><div class="label">📋 총 로드 데이터</div><div class="value">${totalLoadedCount.toLocaleString()}건</div><div class="sub">날짜 필터링 적용 전체 모니터링 대상</div></div>
     <div class="kpi-card red-indicator"><div class="label">⚠️ 한도 초과 분석 그룹</div><div class="value red">${G.filteredData.length.toLocaleString()}개 조합</div><div class="sub">동일 프로젝트 & 동일 협력사 간 합산 계약 분석 조합</div></div>
-    <div class="kpi-card red-indicator"><div class="label">💰 총 한도 초과 금액</div><div class="value red">${fmtToEok(totAmt)}</div><div class="sub">리스크 노출 총액</div></div>`;
+    <div class="kpi-card red-indicator"><div class="label">💰 총 한도 초과 금액</div><div class="value red">${fmtToEok(totAmt)}</div><div class="sub">리스크 노출 총액</div></div>
+    <div class="kpi-card red-indicator" style="cursor:pointer;" onclick="switchTab('tab-suspect', document.getElementById('btn-tab-suspect'))"><div class="label">🔎 쪼개기/증액 의심 리스크</div><div class="value red">${G.suspectData.length.toLocaleString()}건</div><div class="sub">한도 회피성 쪼개기/증액 의심</div></div>`;
   renderCharts();
 }
 
@@ -2458,7 +2590,7 @@ function runCompare() {
       id: 'customLinesAndLabels',
       afterDraw: function(chart) {
         const ctx = chart.ctx; const xAxis = chart.scales.x; const yAxis = chart.scales.y; const chartArea = chart.chartArea;
-        if (!xAxis || !yAxis || !chartArea) return;
+        if (!xAxis || !yAxis) return;
         ctx.save(); ctx.font = "bold 12px Pretendard, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
         chart.data.datasets.forEach(function(dataset, i) {
           const meta = chart.getDatasetMeta(i);
@@ -2501,13 +2633,7 @@ function fmtTimelinePrevDay(dObj) {
 }
 
 function initProjectSettings() { 
-  G.rawData.forEach(r => {
-    const p = r["프로젝트명"];
-    if (G.projectSettings[p] === undefined) {
-      const defaultProjects = ["신안산선", "GTX", "탕정", "서리풀", "G5", "글로벌센터"];
-      G.projectSettings[p] = p ? defaultProjects.some(kw => p.includes(kw)) : false;
-    }
-  }); 
+  G.rawData.forEach(r => { const p = r["프로젝트명"]; if (G.projectSettings[p] === undefined) G.projectSettings[p] = false; }); 
 }
 
 function renderAsidePjtGrid() {
@@ -2567,7 +2693,7 @@ function openGroupContractsModal(pjtName, vendorName) {
   if (!group || !group.그룹계약목록) return;
   const rows = group.그룹계약목록;
 
-  document.getElementById("modalTitle").innerHTML = `🏗️ 🤝 <strong>[${escapeHtml(pjtName)}] - ${escapeHtml(vendorName)}</strong> 상세 계약 명세`;
+  document.getElementById("modalTitle").innerHTML = `🏗️ 🤝 <strong>[${pjtName}] - ${vendorName}</strong> 상세 계약 명세`;
   document.getElementById("modalSubtitle").textContent = `소속 프로젝트: ${pjtName} | 협력업체: ${vendorName}`;
   document.getElementById("modalCountPill").textContent = `대상 계약: ${rows.length}건`;
   document.getElementById("modalAmtPill").textContent = `공급가액 누계: ${Math.round(group.공급금액합계).toLocaleString()}원 (산출 초과: ${Math.round(group.초과금액).toLocaleString()}원)`;
@@ -2587,14 +2713,14 @@ function openGroupContractsModal(pjtName, vendorName) {
   document.getElementById("modalTableBody").innerHTML = rows.map((r, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td>${escapeHtml(r["계약번호"])}</td>
-      <td><strong>${escapeHtml(r["변경차수"] ? (r["변경차수"].includes('차') ? r["변경차수"] : r["변경차수"] + '차') : '최초')}</strong></td>
-      <td title="${escapeHtml(r["계약명"])}">${escapeHtml(r["계약명"].length > 20 ? r["계약명"].slice(0, 20) + '…' : r["계약명"])}</td>
-      <td><span class="badge badge-normal">${escapeHtml(r["업무구분"])}</span></td>
+      <td>${r["계약번호"]}</td>
+      <td><strong>${r["변경차수"] ? (r["변경차수"].includes('차') ? r["변경차수"] : r["변경차수"] + '차') : '최초'}</strong></td>
+      <td title="${r["계약명"]}">${r["계약명"].length > 20 ? r["계약명"].slice(0, 20) + '…' : r["계약명"]}</td>
+      <td><span class="badge badge-normal">${r["업무구분"]}</span></td>
       <td class="num">${Math.round(r["해당계약가액"] || r["공급금액합계"]).toLocaleString()}원</td>
       <td class="num">${Math.round(r["공급가액누계"] || 0).toLocaleString()}원</td>
-      <td>${escapeHtml(classifyReason(r["변경사유"]))}</td>
-      <td title="${escapeHtml(r["변경사유"])}">${escapeHtml(r["변경사유"].length > 25 ? r["변경사유"].slice(0, 25) + '…' : r["변경사유"])}</td>
+      <td>${classifyReason(r["변경사유"])}</td>
+      <td title="${r["변경사유"]}">${r["변경사유"].length > 25 ? r["변경사유"].slice(0, 25) + '…' : r["변경사유"]}</td>
     </tr>
   `).join("");
 
@@ -2609,7 +2735,7 @@ function openPjtContractsModal(pjtName) {
   // 해당 프로젝트명에 속한 [현장+업체] 그룹 목록 필터링
   const pjtGroups = G.filteredData.filter(r => r["프로젝트명"] === pjtName);
 
-  document.getElementById("modalTitle").innerHTML = `🏗️ <strong>${escapeHtml(name)}</strong> 현장 업체별 리스크 명세`;
+  document.getElementById("modalTitle").innerHTML = `🏗️ <strong>${name}</strong> 현장 업체별 리스크 명세`;
   document.getElementById("modalSubtitle").textContent = `소속 프로젝트: ${name}`;
   document.getElementById("modalCountPill").textContent = `대상 업체: ${pjtGroups.length}개사`;
   document.getElementById("modalAmtPill").textContent = `총 초과금액: ${fmtToEok(val.sum)}`;
@@ -2627,12 +2753,12 @@ function openPjtContractsModal(pjtName) {
   document.getElementById("modalTableBody").innerHTML = pjtGroups.map((r, i) => `
     <tr onclick="togglePjtVendorRow(this, '${r["프로젝트명"].replace(/'/g, "\\'")}', '${r["협력사"].replace(/'/g, "\\'")}')" style="cursor: pointer;">
       <td>${i + 1}</td>
-      <td><strong>${escapeHtml(r["협력사"])}</strong></td>
+      <td><strong>${r["협력사"]}</strong></td>
       <td class="num">${r["계약건수"]}건</td>
       <td class="num">${Math.round(r["공급금액합계"]).toLocaleString()}원</td>
       <td class="num" style="color:var(--danger); font-weight:700;">${Math.round(r["초과금액"]).toLocaleString()}원</td>
-      <td><span class="badge badge-normal">${escapeHtml(r["업무구분"])}</span></td>
-      <td>${escapeHtml(r["사유분류"])}</td>
+      <td><span class="badge badge-normal">${r["업무구분"]}</span></td>
+      <td>${r["사유분류"]}</td>
     </tr>
   `).join("") || `<tr><td colspan="7" style="text-align:center; padding:20px;">적발 내역이 없습니다.</td></tr>`;
 
@@ -2647,7 +2773,7 @@ function openVendorContractsModal(vendorName) {
   // 해당 협력사에 속한 [현장+업체] 그룹 목록 필터링
   const vendorGroups = G.filteredData.filter(r => r["협력사"] === vendorName);
 
-  document.getElementById("modalTitle").innerHTML = `🤝 <strong>${escapeHtml(name)}</strong> 협력업체 현장별 리스크 명세`;
+  document.getElementById("modalTitle").innerHTML = `🤝 <strong>${name}</strong> 협력업체 현장별 리스크 명세`;
   document.getElementById("modalSubtitle").textContent = `협력업체명: ${name}`;
   document.getElementById("modalCountPill").textContent = `대상 현장: ${vendorGroups.length}개소`;
   document.getElementById("modalAmtPill").textContent = `총 초과금액: ${fmtToEok(val.sum)}`;
@@ -2665,12 +2791,12 @@ function openVendorContractsModal(vendorName) {
   document.getElementById("modalTableBody").innerHTML = vendorGroups.map((r, i) => `
     <tr onclick="toggleVendorPjtRow(this, '${r["협력사"].replace(/'/g, "\\'")}', '${r["프로젝트명"].replace(/'/g, "\\'")}')" style="cursor: pointer;">
       <td>${i + 1}</td>
-      <td><strong>${escapeHtml(r["프로젝트명"])}</strong></td>
+      <td><strong>${r["프로젝트명"]}</strong></td>
       <td class="num">${r["계약건수"]}건</td>
       <td class="num">${Math.round(r["공급금액합계"]).toLocaleString()}원</td>
       <td class="num" style="color:var(--danger); font-weight:700;">${Math.round(r["초과금액"]).toLocaleString()}원</td>
-      <td><span class="badge badge-normal">${escapeHtml(r["업무구분"])}</span></td>
-      <td>${escapeHtml(r["사유분류"])}</td>
+      <td><span class="badge badge-normal">${r["업무구분"]}</span></td>
+      <td>${r["사유분류"]}</td>
     </tr>
   `).join("") || `<tr><td colspan="7" style="text-align:center; padding:20px;">적발 내역이 없습니다.</td></tr>`;
 
@@ -2683,7 +2809,7 @@ function openJobContractsModal(jobName) {
   const [name, val] = jobKey;
   const originalRows = val.rows.flatMap(r => r.그룹계약목록 || [r]);
 
-  document.getElementById("modalTitle").innerHTML = `📂 <strong>${escapeHtml(name)}</strong> 업무 파트 계약 상세 명세`;
+  document.getElementById("modalTitle").innerHTML = `📂 <strong>${name}</strong> 업무 파트 계약 상세 명세`;
   document.getElementById("modalSubtitle").textContent = `업무분류: ${name}`;
   document.getElementById("modalCountPill").textContent = `대상 계약: ${originalRows.length}건`;
   document.getElementById("modalAmtPill").textContent = `총 초과금액: ${fmtToEok(val.sum)}`;
@@ -2703,14 +2829,14 @@ function openJobContractsModal(jobName) {
   document.getElementById("modalTableBody").innerHTML = originalRows.map((r, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td>${escapeHtml(r["계약번호"])}</td>
-      <td><strong>${escapeHtml(r["협력사"])}</strong></td>
-      <td>${escapeHtml(r["프로젝트명"])}</td>
-      <td title="${escapeHtml(r["계약명"])}">${escapeHtml(r["계약명"].length > 20 ? r["계약명"].slice(0, 20) + '…' : r["계약명"])}</td>
+      <td>${r["계약번호"]}</td>
+      <td><strong>${r["협력사"]}</strong></td>
+      <td>${r["프로젝트명"]}</td>
+      <td title="${r["계약명"]}">${r["계약명"].length > 20 ? r["계약명"].slice(0, 20) + '…' : r["계약명"]}</td>
       <td class="num">${Math.round(r["해당계약가액"] || r["공급금액합계"]).toLocaleString()}원</td>
       <td class="num">${Math.round(r["공급가액누계"] || 0).toLocaleString()}원</td>
-      <td>${escapeHtml(classifyReason(r["변경사유"]))}</td>
-      <td title="${escapeHtml(r["변경사유"])}">${escapeHtml(r["변경사유"].length > 25 ? r["변경사유"].slice(0, 25) + '…' : r["변경사유"])}</td>
+      <td>${classifyReason(r["변경사유"])}</td>
+      <td title="${r["변경사유"]}">${r["변경사유"].length > 25 ? r["변경사유"].slice(0, 25) + '…' : r["변경사유"]}</td>
     </tr>
   `).join("");
 
@@ -2723,7 +2849,7 @@ function openWorkContractsModal(reasonName) {
   const [name, val] = reasonKey;
   const originalRows = val.rows.flatMap(r => r.그룹계약목록 || [r]);
 
-  document.getElementById("modalTitle").innerHTML = `🔧 <strong>${escapeHtml(name)}</strong> 초과 사유 계약 상세 명세`;
+  document.getElementById("modalTitle").innerHTML = `🔧 <strong>${name}</strong> 초과 사유 계약 상세 명세`;
   document.getElementById("modalSubtitle").textContent = `초과 사유 분류: ${name}`;
   document.getElementById("modalCountPill").textContent = `대상 계약: ${originalRows.length}건`;
   document.getElementById("modalAmtPill").textContent = `총 초과금액: ${fmtToEok(val.sum)}`;
@@ -2743,14 +2869,14 @@ function openWorkContractsModal(reasonName) {
   document.getElementById("modalTableBody").innerHTML = originalRows.map((r, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td>${escapeHtml(r["계약번호"])}</td>
-      <td><strong>${escapeHtml(r["협력사"])}</strong></td>
-      <td>${escapeHtml(r["프로젝트명"])}</td>
-      <td title="${escapeHtml(r["계약명"])}">${escapeHtml(r["계약명"].length > 20 ? r["계약명"].slice(0, 20) + '…' : r["계약명"])}</td>
-      <td><span class="badge badge-normal">${escapeHtml(r["업무구분"])}</span></td>
+      <td>${r["계약번호"]}</td>
+      <td><strong>${r["협력사"]}</strong></td>
+      <td>${r["프로젝트명"]}</td>
+      <td title="${r["계약명"]}">${r["계약명"].length > 20 ? r["계약명"].slice(0, 20) + '…' : r["계약명"]}</td>
+      <td><span class="badge badge-normal">${r["업무구분"]}</span></td>
       <td class="num">${Math.round(r["해당계약가액"] || r["공급금액합계"]).toLocaleString()}원</td>
       <td class="num">${Math.round(r["공급가액누계"] || 0).toLocaleString()}원</td>
-      <td title="${escapeHtml(r["변경사유"])}">${escapeHtml(r["변경사유"].length > 25 ? r["변경사유"].slice(0, 25) + '…' : r["변경사유"])}</td>
+      <td title="${r["변경사유"]}">${r["변경사유"].length > 25 ? r["변경사유"].slice(0, 25) + '…' : r["변경사유"]}</td>
     </tr>
   `).join("");
 
@@ -2784,7 +2910,7 @@ function togglePjtVendorRow(tr, pjtName, vendorName) {
       <td colspan="7" style="padding: 12px 20px; border-bottom: 1px solid var(--border);">
         <div class="pjt-vendor-detail-panel">
           <div style="font-weight: 700; margin-bottom: 10px; color: var(--primary); display:flex; justify-content:space-between; font-size:12.5px;">
-            <span>📋 [${escapeHtml(vendorName)}] 개별 계약 상세 내역</span>
+            <span>📋 [${vendorName}] 개별 계약 상세 내역</span>
             <span style="color:var(--muted)">총 ${rows.length}건의 원본 계약 내역이 수록되어 있습니다.</span>
           </div>
           <div style="overflow-x:auto;">
@@ -2809,15 +2935,15 @@ function togglePjtVendorRow(tr, pjtName, vendorName) {
   detailHtml += rows.map((r, i) => `
                 <tr style="background-color: #ffffff;">
                   <td style="padding:6px 10px;">${i + 1}</td>
-                  <td style="padding:6px 10px;">${escapeHtml(r["계약번호"])}</td>
-                  <td style="padding:6px 10px;"><strong>${escapeHtml(r["변경차수"] ? (r["변경차수"].includes('차') ? r["변경차수"] : r["변경차수"] + '차') : '최초')}</strong></td>
-                  <td style="padding:6px 10px;">${escapeHtml(r["프로젝트명"])}</td>
-                  <td style="padding:6px 10px;" title="${escapeHtml(r["계약명"])}">${escapeHtml(r["계약명"].length > 15 ? r["계약명"].slice(0, 15) + '…' : r["계약명"])}</td>
-                  <td style="padding:6px 10px;"><span class="badge badge-normal" style="font-size:10px; padding:2px 6px;">${escapeHtml(r["업무구분"])}</span></td>
+                  <td style="padding:6px 10px;">${r["계약번호"]}</td>
+                  <td style="padding:6px 10px;"><strong>${r["변경차수"] ? (r["변경차수"].includes('차') ? r["변경차수"] : r["변경차수"] + '차') : '최초'}</strong></td>
+                  <td style="padding:6px 10px;">${r["프로젝트명"]}</td>
+                  <td style="padding:6px 10px;" title="${r["계약명"]}">${r["계약명"].length > 15 ? r["계약명"].slice(0, 15) + '…' : r["계약명"]}</td>
+                  <td style="padding:6px 10px;"><span class="badge badge-normal" style="font-size:10px; padding:2px 6px;">${r["업무구분"]}</span></td>
                   <td style="padding:6px 10px;" class="num">${Math.round(r["해당계약가액"] || r["공급금액합계"]).toLocaleString()}원</td>
                   <td style="padding:6px 10px;" class="num">${Math.round(r["공급가액누계"] || 0).toLocaleString()}원</td>
-                  <td style="padding:6px 10px;">${escapeHtml(classifyReason(r["변경사유"]))}</td>
-                  <td style="padding:6px 10px;" title="${escapeHtml(r["변경사유"])}">${escapeHtml(r["변경사유"].length > 20 ? r["변경사유"].slice(0, 20) + '…' : r["변경사유"])}</td>
+                  <td style="padding:6px 10px;">${classifyReason(r["변경사유"])}</td>
+                  <td style="padding:6px 10px;" title="${r["변경사유"]}">${r["변경사유"].length > 20 ? r["변경사유"].slice(0, 20) + '…' : r["변경사유"]}</td>
                 </tr>
   `).join("");
 
@@ -2851,7 +2977,7 @@ function toggleVendorPjtRow(tr, vendorName, pjtName) {
       <td colspan="7" style="padding: 12px 20px; border-bottom: 1px solid var(--border);">
         <div class="pjt-vendor-detail-panel">
           <div style="font-weight: 700; margin-bottom: 10px; color: var(--primary); display:flex; justify-content:space-between; font-size:12.5px;">
-            <span>📋 [${escapeHtml(pjtName)}] 개별 계약 상세 내역</span>
+            <span>📋 [${pjtName}] 개별 계약 상세 내역</span>
             <span style="color:var(--muted)">총 ${rows.length}건의 원본 계약 내역이 수록되어 있습니다.</span>
           </div>
           <div style="overflow-x:auto;">
@@ -2876,15 +3002,15 @@ function toggleVendorPjtRow(tr, vendorName, pjtName) {
   detailHtml += rows.map((r, i) => `
                 <tr style="background-color: #ffffff;">
                   <td style="padding:6px 10px;">${i + 1}</td>
-                  <td style="padding:6px 10px;">${escapeHtml(r["계약번호"])}</td>
-                  <td style="padding:6px 10px;"><strong>${escapeHtml(r["변경차수"] ? (r["변경차수"].includes('차') ? r["변경차수"] : r["변경차수"] + '차') : '최초')}</strong></td>
-                  <td style="padding:6px 10px;">${escapeHtml(r["프로젝트명"])}</td>
-                  <td style="padding:6px 10px;" title="${escapeHtml(r["계약명"])}">${escapeHtml(r["계약명"].length > 15 ? r["계약명"].slice(0, 15) + '…' : r["계약명"])}</td>
-                  <td style="padding:6px 10px;"><span class="badge badge-normal" style="font-size:10px; padding:2px 6px;">${escapeHtml(r["업무구분"])}</span></td>
+                  <td style="padding:6px 10px;">${r["계약번호"]}</td>
+                  <td style="padding:6px 10px;"><strong>${r["변경차수"] ? (r["변경차수"].includes('차') ? r["변경차수"] : r["변경차수"] + '차') : '최초'}</strong></td>
+                  <td style="padding:6px 10px;">${r["프로젝트명"]}</td>
+                  <td style="padding:6px 10px;" title="${r["계약명"]}">${r["계약명"].length > 15 ? r["계약명"].slice(0, 15) + '…' : r["계약명"]}</td>
+                  <td style="padding:6px 10px;"><span class="badge badge-normal" style="font-size:10px; padding:2px 6px;">${r["업무구분"]}</span></td>
                   <td style="padding:6px 10px;" class="num">${Math.round(r["해당계약가액"] || r["공급금액합계"]).toLocaleString()}원</td>
                   <td style="padding:6px 10px;" class="num">${Math.round(r["공급가액누계"] || 0).toLocaleString()}원</td>
-                  <td style="padding:6px 10px;">${escapeHtml(classifyReason(r["변경사유"]))}</td>
-                  <td style="padding:6px 10px;" title="${escapeHtml(r["변경사유"])}">${escapeHtml(r["변경사유"].length > 20 ? r["변경사유"].slice(0, 20) + '…' : r["변경사유"])}</td>
+                  <td style="padding:6px 10px;">${classifyReason(r["변경사유"])}</td>
+                  <td style="padding:6px 10px;" title="${r["변경사유"]}">${r["변경사유"].length > 20 ? r["변경사유"].slice(0, 20) + '…' : r["변경사유"]}</td>
                 </tr>
   `).join("");
 
@@ -2901,6 +3027,125 @@ function toggleVendorPjtRow(tr, vendorName, pjtName) {
   tr.classList.add("expanded-row");
 }
 
+function renderSuspectTable(dataList) { sortAndRenderSuspect(dataList); }
+
+function sortAndRenderSuspect(dataList) {
+  const key = G.suspectSort.key; const dir = G.suspectSort.dir; const arr = [...dataList];
+  if (key) {
+    arr.sort((a,b) => {
+      let av = a[key], bv = b[key];
+      if (key === "해당계약가액" || key === "공급가액누계") { av = toNum(av); bv = toNum(bv); }
+      else av = String(av ?? ""), bv = String(bv ?? "");
+      if (av < bv) return dir === "asc" ? -1 : 1; if (av > bv) return dir === "asc" ? 1 : -1; return 0;
+    });
+  }
+  document.getElementById("suspectCount").textContent = `감지 건수: ${arr.length}건`;
+  document.getElementById("suspectTbody").innerHTML = arr.map((r, i) => `<tr><td>${i+1}</td><td style="font-weight:700; color:var(--danger);" data-val="${r["의심유형"]}">${r["의심유형"]}</td><td data-val="${r["계약번호"]}">${r["계약번호"]}</td><td data-val="${r["협력사"]}"><strong>${r["협력사"]}</strong></td><td data-val="${r["프로젝트명"]}">${r["프로젝트명"]}</td><td title="${r["계약명"]}" data-val="${r["계약명"]}">${r["계약명"].length>15?r["계약명"].slice(0,15)+'…':r["계약명"]}</td><td class="num" data-val="${r["해당계약가액"]}">${Math.round(r["해당계약가액"]).toLocaleString()}원</td><td data-val="${r["변경차수"]}">${r["변경차수"] ? (r["변경차수"].includes('차') ? r["변경차수"] : r["변경차수"]+'차') : '최초'}</td><td style="font-size:12px; color:var(--muted); line-height:1.4;" title="${r["상세사유"]}">${r["상세사유"]}</td></tr>`).join("") || `<tr><td colspan="9" style="text-align:center; padding:40px; color:var(--muted);">의심 거래 거래가 감지되지 않았습니다.</td></tr>`;
+}
+
+function bindSuspectSortHandlers() {
+  document.querySelectorAll("#suspectTable thead th[data-key]").forEach(th => {
+    th.onclick = () => {
+      const k = th.getAttribute("data-key");
+      if (G.suspectSort.key === k) G.suspectSort.dir = G.suspectSort.dir === "asc" ? "desc" : "asc";
+      else { G.suspectSort.key = k; G.suspectSort.dir = "asc"; }
+      document.querySelectorAll("#suspectTable thead th[data-key]").forEach(x => x.classList.remove("sortable-asc","sortable-desc"));
+      th.classList.add(G.suspectSort.dir === "asc" ? "sortable-asc" : "sortable-desc");
+      applySuspectFilter();
+    };
+  });
+}
+
+function populateSuspectFilters() {
+  const jobSel = document.getElementById("fSuspectJobType");
+  if (!jobSel) return;
+  const prevJob = jobSel.value;
+  const jobs = [...new Set(G.suspectData.map(r=>r["업무구분"]).filter(Boolean))].sort();
+  jobSel.innerHTML = `<option value="">전체보기</option>` + jobs.map(j=>`<option>${j}</option>`).join("");
+  if (jobs.includes(prevJob)) jobSel.value = prevJob;
+}
+
+function applySuspectFilter() {
+  const type = document.getElementById("fSuspectType").value;
+  const job = document.getElementById("fSuspectJobType").value;
+  const kw = document.getElementById("fSuspectSearchKeyword") ? document.getElementById("fSuspectSearchKeyword").value.toLowerCase().trim() : "";
+
+  const target = G.suspectData.filter(r => {
+    const matchType = !type || r["의심유형"] === type;
+    const matchJob = !job || r["업무구분"] === job;
+    let matchKeyword = true;
+    if (kw) {
+      const terms = kw.split(/\s+/).filter(Boolean);
+      const targetText = `${r["계약번호"]} ${r["계약명"]} ${r["협력사"]} ${r["프로젝트명"]} ${r["변경사유"]} ${r["의심유형"]} ${r["상세사유"]}`.toLowerCase();
+      matchKeyword = terms.every(term => targetText.includes(term));
+    }
+    return matchType && matchJob && matchKeyword;
+  });
+
+  sortAndRenderSuspect(target);
+}
+
+function resetSuspectFilter() {
+  document.getElementById("fSuspectType").value = "";
+  document.getElementById("fSuspectJobType").value = "";
+  if (document.getElementById("fSuspectSearchKeyword")) {
+    document.getElementById("fSuspectSearchKeyword").value = "";
+  }
+  sortAndRenderSuspect(G.suspectData);
+}
+
+function exportSuspectToExcel() {
+  if (!G.suspectData.length) { alert("내보낼 데이터가 없습니다."); return; }
+  const type = document.getElementById("fSuspectType").value;
+  const job = document.getElementById("fSuspectJobType").value;
+  const kw = document.getElementById("fSuspectSearchKeyword") ? document.getElementById("fSuspectSearchKeyword").value.toLowerCase().trim() : "";
+
+  const target = G.suspectData.filter(r => {
+    const matchType = !type || r["의심유형"] === type;
+    const matchJob = !job || r["업무구분"] === job;
+    let matchKeyword = true;
+    if (kw) {
+      const terms = kw.split(/\s+/).filter(Boolean);
+      const targetText = `${r["계약번호"]} ${r["계약명"]} ${r["협력사"]} ${r["프로젝트명"]} ${r["변경사유"]} ${r["의심유형"]} ${r["상세사유"]}`.toLowerCase();
+      matchKeyword = terms.every(term => targetText.includes(term));
+    }
+    return matchType && matchJob && matchKeyword;
+  });
+
+  if (!target.length) { alert("현재 필터링된 조건에 부합하는 의심 내역이 없습니다."); return; }
+
+  const exportData = target.map((r, i) => ({
+    "No": i + 1,
+    "의심 유형": r["의심유형"],
+    "계약번호": r["계약번호"],
+    "협력사": r["협력사"],
+    "소속 프로젝트명": r["프로젝트명"],
+    "계약명": r["계약명"],
+    "계약금액(원)": Math.round(r["해당계약가액"]),
+    "변경 차수": r["변경차수"] || "최초",
+    "시스템 정밀 분석 리스크 소견": r["상세사유"]
+  }));
+  
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+  worksheet['!cols'] = [
+    {wch: 5},   // No
+    {wch: 18},  // 의심 유형
+    {wch: 16},  // 계약번호
+    {wch: 26},  // 협력사
+    {wch: 26},  // 소속 프로젝트명
+    {wch: 36},  // 계약명
+    {wch: 18},  // 계약금액
+    {wch: 12},  // 변경차수
+    {wch: 80}   // 리스크 소견
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "우회 의심 거래 명세");
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  XLSX.writeFile(workbook, `소액수의계약_우회_의심_명세_${dateStr}.xlsx`);
+  showToast("📊 필터링 결과 엑셀 리포트 출력 완료!");
+}
+
 function downloadThisApp() {
   const html = "<!DOCTYPE html>\n<html>\n" + document.documentElement.outerHTML + "\n</html>";
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8;" })); a.download = "소액수의계약_초과_통제_시스템.html"; a.click();
@@ -2915,6 +3160,7 @@ function showToast(m) {
 
 document.addEventListener("DOMContentLoaded", () => {
   bindDetailSortHandlers();
+  bindSuspectSortHandlers();
   setTimeout(() => document.getElementById("toast").classList.remove("show"), 2500);
 });
 </script>
